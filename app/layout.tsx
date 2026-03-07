@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Orbitron, Space_Grotesk, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Navbar from "./components/Navbar";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} font-sans antialiased bg-[#0A0F1F] text-gray-200`}
       >
+        <Navbar />
         {children}
       </body>
     </html>
