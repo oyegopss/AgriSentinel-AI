@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Store, TrendingUp, Award, BarChart3 } from "lucide-react";
+import { ArrowLeft, Store, TrendingUp, Award, BarChart3, Loader2, AlertTriangle, Database } from "lucide-react";
 import { fetchMandiPrices } from "@/lib/mandiApi";
 
 const CROP_OPTIONS = ["Wheat", "Rice", "Maize", "Cotton", "Sugarcane"] as const;
@@ -25,7 +25,7 @@ function getRecommendation(crop: string, rows: MandiRow[], bestMarket: MandiRow 
     return `Based on current government mandi prices, ${bestMarket.mandiName} offers competitive rates for ${crop}.`;
   }
   const diff = Math.max(0, bestMarket.pricePerQuintal - nearestMarket.pricePerQuintal);
-  return `Based on current government mandi prices, selling at ${bestMarket.mandiName} may increase your profit by ₹${diff} per quintal.`;
+  return `Based on current government mandi prices, selling at ${bestMarket.mandiName} may increase your profit by ₹${diff} per quintal compared to ${nearestMarket.mandiName}.`;
 }
 
 export default function MandiIntelligencePage() {
@@ -48,6 +48,7 @@ export default function MandiIntelligencePage() {
     setIsLoading(true);
     setError(null);
     setHasAnalyzed(false);
+    setMarkets([]);
     try {
       const data = await fetchMandiPrices(crop, "Uttar Pradesh");
       const mapped: MandiRow[] = data
@@ -66,7 +67,7 @@ export default function MandiIntelligencePage() {
     } catch (err) {
       console.error("Failed to fetch government mandi data:", err);
       setMarkets([]);
-      setError("Unable to load government mandi data. Please try again later.");
+      setError("Unable to fetch mandi data at the moment. Please try again.");
       setHasAnalyzed(true);
     } finally {
       setIsLoading(false);
@@ -100,11 +101,11 @@ export default function MandiIntelligencePage() {
             Smart <span className="text-gradient">Mandi Intelligence</span>
           </h1>
           <p className="mt-2 text-gray-400">
-            Find the most profitable market to sell your crops.
+            Find the most profitable market to sell your crops using live government data.
           </p>
         </motion.div>
 
-        {/* SECTION 1 — Crop Selection */}
+        {/* Crop Selection */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,12 +147,8 @@ export default function MandiIntelligencePage() {
             >
               {isLoading ? (
                 <>
-                  <motion.span
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="h-5 w-5 rounded-full border-2 border-[#0A0F1F] border-t-transparent"
-                  />
-                  Analyzing…
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Fetching…
                 </>
               ) : (
                 <>
@@ -161,15 +158,44 @@ export default function MandiIntelligencePage() {
               )}
             </motion.button>
           </div>
-          {isLoading && (
-            <p className="mt-4 text-center text-sm text-[#00FF9C]">
-              Analyzing real-time mandi prices…
-            </p>
-          )}
         </motion.div>
 
         <AnimatePresence mode="wait">
-          {!hasAnalyzed && !isLoading ? (
+          {/* Loading State */}
+          {isLoading && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="glass-card neon-border flex flex-col items-center justify-center rounded-2xl p-10 text-center"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                className="mb-5"
+              >
+                <Database className="h-12 w-12 text-[#00FF9C]" />
+              </motion.div>
+              <p className="text-lg font-semibold text-white">
+                Fetching latest mandi prices…
+              </p>
+              <p className="mt-2 text-sm text-gray-400">
+                Connecting to Government Open Data API (data.gov.in)
+              </p>
+              <div className="mt-5 h-1.5 w-64 max-w-full overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-[#00FF9C] to-[#00C3FF]"
+                  initial={{ width: "0%" }}
+                  animate={{ width: ["0%", "70%", "90%", "95%"] }}
+                  transition={{ duration: 3, ease: "easeOut" }}
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {/* Placeholder — no results yet */}
+          {!hasAnalyzed && !isLoading && (
             <motion.div
               key="placeholder"
               initial={{ opacity: 0 }}
@@ -182,133 +208,166 @@ export default function MandiIntelligencePage() {
                 Select a crop and click &quot;Analyze Market Prices&quot; to see mandi comparison.
               </p>
             </motion.div>
-          ) : (
-            hasAnalyzed &&
-            !isLoading && (
-              <motion.div
-                key="results"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35 }}
-                className="space-y-8"
+          )}
+
+          {/* Error State */}
+          {hasAnalyzed && !isLoading && error && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center rounded-2xl border border-rose-500/30 bg-rose-500/10 p-8 text-center"
+            >
+              <AlertTriangle className="mb-3 h-10 w-10 text-rose-400" />
+              <p className="text-lg font-semibold text-rose-300">{error}</p>
+              <p className="mt-2 text-sm text-gray-400">Check your internet connection or try a different crop.</p>
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                className="mt-4 rounded-xl border border-rose-400/40 bg-rose-400/10 px-6 py-2 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-400/20"
               >
-                {/* SECTION 2 — Mandi Price Table */}
-                <div className="glass-card neon-border overflow-hidden rounded-2xl">
-                  <div className="border-b border-white/10 bg-white/5 px-6 py-4">
-                    <h2 className="font-display flex items-center gap-2 text-lg font-semibold text-white">
-                      <BarChart3 className="h-5 w-5 text-[#00FF9C]" />
-                      Mandi Price Table
-                    </h2>
+                Retry
+              </button>
+            </motion.div>
+          )}
+
+          {/* Results */}
+          {hasAnalyzed && !isLoading && !error && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              className="space-y-8"
+            >
+              {/* Summary cards */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="glass-card rounded-xl border border-white/10 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Markets Found</p>
+                  <p className="mt-1 text-2xl font-bold text-white">{rows.length}</p>
+                </div>
+                <div className="glass-card rounded-xl border border-white/10 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Best Price</p>
+                  <p className="mt-1 text-2xl font-bold text-[#00FF9C]">
+                    {bestMarket ? `₹${bestMarket.pricePerQuintal.toLocaleString()}` : "—"}
+                  </p>
+                </div>
+                <div className="glass-card rounded-xl border border-white/10 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Best Market</p>
+                  <p className="mt-1 truncate text-lg font-semibold text-white">
+                    {bestMarket?.mandiName ?? "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Mandi Price Table */}
+              <div className="glass-card neon-border overflow-hidden rounded-2xl">
+                <div className="border-b border-white/10 bg-white/5 px-6 py-4">
+                  <h2 className="font-display flex items-center gap-2 text-lg font-semibold text-white">
+                    <BarChart3 className="h-5 w-5 text-[#00FF9C]" />
+                    Mandi Price Table
+                    <span className="ml-auto rounded-full bg-[#00FF9C]/10 px-2.5 py-0.5 text-xs font-medium text-[#00FF9C]">
+                      Live Data
+                    </span>
+                  </h2>
+                </div>
+                {rows.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-sm text-gray-400">
+                    No markets found for {crop} in Uttar Pradesh. Try a different crop.
                   </div>
-                  {error ? (
-                    <div className="px-6 py-5 text-sm text-rose-300">{error}</div>
-                  ) : rows.length === 0 ? (
-                    <div className="px-6 py-5 text-sm text-gray-400">
-                      No markets found for {crop} in Uttar Pradesh.
-                    </div>
-                  ) : (
+                ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-white/10 text-left text-sm text-gray-400">
                           <th className="px-6 py-4 font-display font-semibold">Crop</th>
                           <th className="px-6 py-4 font-display font-semibold">Mandi Name</th>
-                          <th className="px-6 py-4 font-display font-semibold">Price (₹ per quintal)</th>
+                          <th className="px-6 py-4 font-display font-semibold">Price (₹/q)</th>
                           <th className="px-6 py-4 font-display font-semibold">District</th>
-                          <th className="px-6 py-4 font-display font-semibold">Recommendation</th>
+                          <th className="px-6 py-4 font-display font-semibold">Status</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {rows.map((row) => {
+                        {rows.map((row, i) => {
                           const isBestMarket = bestMarket !== null && row.id === bestMarket.id;
                           return (
-                          <tr
-                            key={row.id}
-                            className={`border-b border-white/5 transition-colors last:border-0 ${
-                              isBestMarket
-                                ? "bg-[#00FF9C]/10 border-l-4 border-l-[#00FF9C]"
-                                : "hover:bg-white/5"
-                            }`}
-                          >
-                            <td className="px-6 py-4 font-medium text-white">{row.crop}</td>
-                            <td className="px-6 py-4 text-gray-300">{row.mandiName}</td>
-                            <td className="px-6 py-4">
-                              <span
-                                className={
-                                  isBestMarket
-                                    ? "font-display font-semibold text-[#00FF9C]"
-                                    : "text-gray-300"
-                                }
-                              >
-                                ₹{row.pricePerQuintal.toLocaleString()}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-gray-400">{row.district}</td>
-                            <td className="px-6 py-4">
-                              {isBestMarket ? (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#00FF9C]/20 px-3 py-1 text-xs font-semibold text-[#00FF9C]">
-                                  <Award className="h-3.5 w-3.5" />
-                                  Best Market
+                            <motion.tr
+                              key={row.id}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.04 }}
+                              className={`border-b border-white/5 transition-colors last:border-0 ${
+                                isBestMarket
+                                  ? "bg-[#00FF9C]/10 border-l-4 border-l-[#00FF9C]"
+                                  : "hover:bg-white/5"
+                              }`}
+                            >
+                              <td className="px-6 py-4 font-medium text-white">{row.crop}</td>
+                              <td className="px-6 py-4 text-gray-300">{row.mandiName}</td>
+                              <td className="px-6 py-4">
+                                <span className={isBestMarket ? "font-display font-semibold text-[#00FF9C]" : "text-gray-300"}>
+                                  ₹{row.pricePerQuintal.toLocaleString()}
                                 </span>
-                              ) : (
-                                <span className="text-gray-500">—</span>
-                              )}
-                            </td>
-                          </tr>
+                              </td>
+                              <td className="px-6 py-4 text-gray-400">{row.district}</td>
+                              <td className="px-6 py-4">
+                                {isBestMarket ? (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#00FF9C]/20 px-3 py-1 text-xs font-semibold text-[#00FF9C]">
+                                    <Award className="h-3.5 w-3.5" />
+                                    Best Market
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500">—</span>
+                                )}
+                              </td>
+                            </motion.tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
-                  )}
-                </div>
-
-                {/* SECTION 3 — AI Recommendation Card (glowing green border) */}
-                <div className="rounded-2xl border-2 border-[#00FF9C]/50 bg-[#00FF9C]/5 p-6 shadow-[0_0_30px_rgba(0,255,156,0.15)]">
-                  <p className="text-sm font-medium uppercase tracking-wider text-[#00FF9C] mb-2">
-                    AI Recommendation
-                  </p>
-                  <p className="text-gray-200 leading-relaxed">
-                    {recommendation}
-                  </p>
-                </div>
-
-                {/* SECTION 4 — Profit Comparison Chart (bar chart) */}
-                {!error && rows.length > 0 && (
-                  <div className="glass-card neon-border rounded-2xl p-6">
-                    <h2 className="mb-6 font-display text-lg font-semibold text-white">
-                      Price comparison
-                    </h2>
-                    <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-2">
-                      {rows.map((row, i) => (
-                        <div key={row.id} className="flex flex-1 flex-col items-center gap-2">
-                          <motion.div
-                            initial={{ height: 0 }}
-                            animate={{
-                              height: `${(row.pricePerQuintal / maxPrice) * 100}%`,
-                            }}
-                            transition={{
-                              duration: 0.6,
-                              delay: 0.1 * i,
-                              ease: [0.22, 1, 0.36, 1],
-                            }}
-                            className="w-full max-w-[80px] min-h-[24px] rounded-t-lg bg-linear-to-t from-[#00FF9C] to-[#00C3FF]"
-                            style={{ maxHeight: "140px" }}
-                          />
-                          <span className="text-center text-xs font-medium text-gray-400">
-                            ₹{row.pricePerQuintal}
-                          </span>
-                          <span className="text-center text-xs text-gray-500">
-                            {row.mandiName.replace(" Mandi", "")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 )}
-              </motion.div>
-            )
+              </div>
+
+              {/* AI Recommendation Card */}
+              <div className="rounded-2xl border-2 border-[#00FF9C]/50 bg-[#00FF9C]/5 p-6 shadow-[0_0_30px_rgba(0,255,156,0.15)]">
+                <p className="mb-2 text-sm font-medium uppercase tracking-wider text-[#00FF9C]">
+                  AI Recommendation
+                </p>
+                <p className="leading-relaxed text-gray-200">{recommendation}</p>
+              </div>
+
+              {/* Price Comparison Chart */}
+              {rows.length > 0 && (
+                <div className="glass-card neon-border rounded-2xl p-6">
+                  <h2 className="mb-6 font-display text-lg font-semibold text-white">
+                    Price Comparison
+                  </h2>
+                  <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-2">
+                    {rows.map((row, i) => (
+                      <div key={row.id} className="flex flex-1 flex-col items-center gap-2">
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={{ height: `${(row.pricePerQuintal / maxPrice) * 100}%` }}
+                          transition={{ duration: 0.6, delay: 0.1 * i, ease: [0.22, 1, 0.36, 1] }}
+                          className="w-full max-w-[80px] min-h-[24px] rounded-t-lg bg-gradient-to-t from-[#00FF9C] to-[#00C3FF]"
+                          style={{ maxHeight: "140px" }}
+                        />
+                        <span className="text-center text-xs font-medium text-gray-400">₹{row.pricePerQuintal}</span>
+                        <span className="text-center text-xs text-gray-500">{row.mandiName.replace(/ Mandi/i, "")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Data source badge */}
+              <p className="text-center text-xs text-gray-600">
+                Data source: Government of India — data.gov.in Open Data API
+              </p>
+            </motion.div>
           )}
         </AnimatePresence>
       </main>

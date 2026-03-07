@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, ArrowLeft, Leaf, AlertCircle, CheckCircle2, Flame, Loader2, Check, HelpCircle, Camera } from "lucide-react";
-// TensorFlow.js loaded dynamically to avoid SSR (window) issues in Next.js
+import { Upload, ArrowLeft, Leaf, AlertCircle, CheckCircle2, Flame, Loader2, Check, HelpCircle, Camera, Sparkles, Shield, Bug, Sun, Droplets, ImageIcon } from "lucide-react";
 type TF = typeof import("@tensorflow/tfjs");
 
 const LABELS = ["Healthy Leaf", "Leaf Spot", "Rust Disease", "Powdery Mildew"] as const;
@@ -67,6 +66,87 @@ const DISEASES = [
     color: "#94A3B8",
   },
 ] as const;
+
+const DEMO_LEAF_IMAGES = [
+  { label: "Healthy Leaf", src: "/demo-leaves/healthy_leaf.svg" },
+  { label: "Rust Disease", src: "/demo-leaves/rust_leaf.svg" },
+  { label: "Powdery Mildew", src: "/demo-leaves/powdery_leaf.svg" },
+  { label: "Leaf Spot", src: "/demo-leaves/leaf_spot.svg" },
+] as const;
+
+type DiseaseInsight = {
+  explanation: string;
+  causes: string[];
+  yieldImpact: string;
+  prevention: string[];
+};
+
+const AI_INSIGHTS: Record<string, DiseaseInsight> = {
+  "Healthy Leaf": {
+    explanation: "The leaf appears healthy with no visible signs of disease. The plant is in good condition with normal chlorophyll levels and cell structure.",
+    causes: [],
+    yieldImpact: "No yield impact expected. The crop is on track for normal harvest potential.",
+    prevention: ["Maintain regular watering schedule", "Ensure balanced nutrient supply", "Monitor for early signs of stress", "Rotate crops seasonally"],
+  },
+  "Leaf Spot": {
+    explanation: "Leaf spot diseases are caused by various fungal or bacterial pathogens that create localized necrotic lesions on the leaf surface, reducing the plant's photosynthetic capacity.",
+    causes: ["Fungal pathogens (Cercospora, Septoria, Alternaria)", "Bacterial infections", "High humidity and prolonged leaf wetness", "Poor air circulation between plants"],
+    yieldImpact: "Moderate yield reduction of 10–25% if untreated. Severe infections can cause premature defoliation.",
+    prevention: ["Apply copper-based or chlorothalonil fungicide", "Remove and destroy infected leaves promptly", "Water at the base — avoid wetting foliage", "Ensure adequate plant spacing for airflow"],
+  },
+  "Rust Disease": {
+    explanation: "Rust is a severe fungal disease characterized by orange-brown pustules on leaf surfaces. The fungal spores spread rapidly through wind and can devastate entire crops within weeks.",
+    causes: ["Fungal spores (Puccinia species)", "Cool, moist weather conditions (15–25°C)", "Wind-borne spore dispersal", "Excess nitrogen fertilization"],
+    yieldImpact: "High yield loss of 20–40% or more. Severe rust can cause complete crop failure if left unchecked.",
+    prevention: ["Apply tebuconazole or azoxystrobin fungicide within 3 days", "Remove and burn infected plant parts", "Avoid excess nitrogen; use balanced fertilizer", "Plant resistant crop varieties when available"],
+  },
+  "Powdery Mildew": {
+    explanation: "Powdery mildew appears as white powdery patches on leaf surfaces. It thrives in warm, dry conditions with high humidity and restricts nutrient uptake and photosynthesis.",
+    causes: ["Fungal pathogen (Erysiphales order)", "Warm days and cool nights", "High humidity with poor air circulation", "Dense planting and shaded areas"],
+    yieldImpact: "Moderate yield reduction of 10–20%. Fruit quality may also be reduced with cosmetic damage.",
+    prevention: ["Apply sulfur-based fungicide or neem oil spray", "Improve air circulation around plants", "Avoid overhead watering; water at soil level", "Remove severely affected leaves and destroy them"],
+  },
+  "Uncertain Leaf Condition": {
+    explanation: "The model confidence is below the threshold. The image may be blurry, poorly lit, or not clearly showing a leaf. Try uploading a clearer, well-lit photo of a single leaf.",
+    causes: ["Image quality too low for accurate analysis", "Leaf not clearly visible in frame", "Unusual disease not in training dataset"],
+    yieldImpact: "Cannot determine yield impact without a confident diagnosis.",
+    prevention: ["Take a close-up photo with good lighting", "Ensure the leaf fills most of the frame", "Use a plain background behind the leaf", "Try scanning from a different angle"],
+  },
+};
+
+type TreatmentDetail = {
+  fungicide: string;
+  preventive: string[];
+  practices: string[];
+};
+
+const TREATMENT_DETAILS: Record<string, TreatmentDetail> = {
+  "Healthy Leaf": {
+    fungicide: "None required",
+    preventive: ["Continue regular monitoring", "Maintain current care practices"],
+    practices: ["Balanced fertilization", "Proper irrigation schedule", "Crop rotation"],
+  },
+  "Leaf Spot": {
+    fungicide: "Copper hydroxide, Chlorothalonil, or Mancozeb",
+    preventive: ["Remove infected leaves immediately", "Avoid overhead irrigation", "Space plants for airflow"],
+    practices: ["Apply fungicide every 7–10 days during wet weather", "Use drip irrigation", "Mulch to prevent splash-borne spores"],
+  },
+  "Rust Disease": {
+    fungicide: "Tebuconazole, Azoxystrobin, or Propiconazole",
+    preventive: ["Remove and destroy infected plant parts", "Avoid excess nitrogen", "Monitor weather for rust-favorable conditions"],
+    practices: ["Apply systemic fungicide within 3 days of detection", "Use resistant cultivars", "Ensure good field drainage"],
+  },
+  "Powdery Mildew": {
+    fungicide: "Sulfur-based spray, Neem oil, or Potassium bicarbonate",
+    preventive: ["Improve air circulation", "Avoid dense planting", "Water at the base of plants"],
+    practices: ["Prune affected leaves and destroy them", "Apply fungicide early morning or evening", "Consider biological controls (Bacillus subtilis)"],
+  },
+  "Uncertain Leaf Condition": {
+    fungicide: "Upload a clearer image for diagnosis",
+    preventive: ["Take photo in good lighting", "Ensure leaf fills the frame"],
+    practices: ["Use a plain background", "Try both front and back of leaf"],
+  },
+};
 
 const PIPELINE_STEPS = [
   "Uploading image",
@@ -802,6 +882,7 @@ export default function DiseaseDetectionPage() {
             <>
           {/* 1. Image Upload – drag and drop or upload button */}
           {!imagePreview ? (
+            <>
             <label
               htmlFor="leaf-upload"
               onDrop={handleDrop}
@@ -819,6 +900,32 @@ export default function DiseaseDetectionPage() {
               </span>
               <span className="text-sm text-gray-400">PNG, JPG up to 10MB</span>
             </label>
+            {/* Try Demo Image */}
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-400">
+                <ImageIcon className="h-4 w-4 text-[#00FF9C]" />
+                Try Demo Image
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DEMO_LEAF_IMAGES.map((demo) => (
+                  <button
+                    key={demo.label}
+                    type="button"
+                    onClick={() => {
+                      setImagePreview(demo.src);
+                      setFileName(demo.label);
+                      setResult(null);
+                      setInferenceError(null);
+                    }}
+                    className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:border-[#00FF9C]/40 hover:bg-[#00FF9C]/10 hover:text-[#00FF9C]"
+                  >
+                    {demo.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-600">Click a label to load a sample leaf and test the AI model instantly.</p>
+            </div>
+            </>
           ) : (
             <>
               {/* 2. Image Preview */}
@@ -1171,12 +1278,88 @@ export default function DiseaseDetectionPage() {
                     {result.severity}
                   </span>
                 </div>
-                <div className="rounded-lg bg-white/5 p-4">
-                  <p className="text-sm font-medium text-gray-400">Recommendation:</p>
-                  <p className="mt-2 text-sm leading-relaxed text-gray-300">
-                    {result.treatment}
-                  </p>
+                {/* AI Crop Advisor Card */}
+                <div className="rounded-xl border border-[#00C3FF]/30 bg-[#00C3FF]/5 p-5">
+                  <div className="mb-4 flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00C3FF]/20">
+                      <Sparkles className="h-4 w-4 text-[#00C3FF]" />
+                    </div>
+                    <h3 className="font-display text-sm font-bold text-[#00C3FF]">AI Crop Advisor</h3>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-start gap-3">
+                      <Shield className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-300">Suggested Fungicide / Pesticide</p>
+                        <p className="mt-0.5 text-gray-400">{TREATMENT_DETAILS[result.name]?.fungicide ?? result.treatment}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Bug className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-300">Preventive Steps</p>
+                        <ul className="mt-1 list-inside list-disc space-y-0.5 text-gray-400">
+                          {(TREATMENT_DETAILS[result.name]?.preventive ?? [result.treatment]).map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Sun className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-300">Best Farming Practices</p>
+                        <ul className="mt-1 list-inside list-disc space-y-0.5 text-gray-400">
+                          {(TREATMENT_DETAILS[result.name]?.practices ?? []).map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {/* AI Insight Card */}
+                {AI_INSIGHTS[result.name] && (
+                  <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-5">
+                    <div className="mb-4 flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400/20">
+                        <Leaf className="h-4 w-4 text-amber-400" />
+                      </div>
+                      <h3 className="font-display text-sm font-bold text-amber-400">AI Insight</h3>
+                    </div>
+                    <p className="mb-3 text-sm leading-relaxed text-gray-300">
+                      {AI_INSIGHTS[result.name]!.explanation}
+                    </p>
+                    {AI_INSIGHTS[result.name]!.causes.length > 0 && (
+                      <div className="mb-3">
+                        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          <Droplets className="h-3 w-3" /> Possible Environmental Causes
+                        </p>
+                        <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-gray-400">
+                          {AI_INSIGHTS[result.name]!.causes.map((c, i) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="mb-3">
+                      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        <Flame className="h-3 w-3" /> Potential Yield Impact
+                      </p>
+                      <p className="mt-1 text-sm text-gray-400">{AI_INSIGHTS[result.name]!.yieldImpact}</p>
+                    </div>
+                    {AI_INSIGHTS[result.name]!.prevention.length > 0 && (
+                      <div>
+                        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          <Shield className="h-3 w-3" /> Suggested Prevention
+                        </p>
+                        <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-gray-400">
+                          {AI_INSIGHTS[result.name]!.prevention.map((p, i) => <li key={i}>{p}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {heatmapDataUrl != null && imagePreview && (
                   <div className="rounded-lg border border-white/10 bg-white/5 p-4">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

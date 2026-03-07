@@ -3,6 +3,7 @@ import { Orbitron, Space_Grotesk, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import PageTransition from "./components/PageTransition";
+import Footer from "./components/Footer";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -37,6 +38,7 @@ export default function RootLayout({
       >
         <Navbar />
         <PageTransition>{children}</PageTransition>
+        <Footer />
       </body>
     </html>
   );
