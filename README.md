@@ -2,6 +2,10 @@
 
 **AgriSentinel AI** is an AI-powered agriculture assistant that helps farmers **detect crop diseases**, **predict yield**, and **find the best mandi prices** using deep learning and government data APIs—all in the browser.
 
+## Live Demo
+
+**[https://agrisentinel-ai.vercel.app](https://agrisentinel-ai.vercel.app)**
+
 ---
 
 ## Overview
