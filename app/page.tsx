@@ -12,6 +12,8 @@ import {
   Bug,
   Store,
   ChevronRight,
+  Cpu,
+  Scan,
 } from "lucide-react";
 import ParticleBackground from "./components/ParticleBackground";
 
@@ -130,7 +132,7 @@ export default function Home() {
               Try Disease Detection
             </motion.a>
             <motion.a
-              href="#how-it-works"
+              href="#demo"
               className="btn-glow-outline group flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#00C3FF] text-[#00C3FF] font-semibold transition-all duration-300 hover:bg-[#00C3FF]/10"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
@@ -160,7 +162,7 @@ export default function Home() {
           </motion.p>
 
           <motion.div
-            className="grid md:grid-cols-3 gap-8"
+            className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
             variants={stagger}
             initial="initial"
             whileInView="animate"
@@ -169,23 +171,29 @@ export default function Home() {
             {[
               {
                 icon: Bug,
-                title: "Crop disease loss",
-                desc: "Up to 40% yield loss due to late or wrong diagnosis. We detect diseases early from leaf images.",
+                title: "Late disease detection",
+                desc: "Farmers lose yield when diseases are spotted too late. We detect crop disease early from leaf images.",
                 color: "#00FF9C",
-              },
-              {
-                icon: TrendingDown,
-                title: "Price uncertainty",
-                desc: "Farmers sell at low prices due to lack of mandi and demand insights. We recommend the best mandis.",
-                color: "#00C3FF",
               },
               {
                 icon: BarChart3,
                 title: "No yield prediction",
                 desc: "No way to plan harvest or storage. We predict yield using weather, soil, and crop data.",
+                color: "#00C3FF",
+              },
+              {
+                icon: TrendingDown,
+                title: "Price uncertainty",
+                desc: "Selling at the wrong mandi or time cuts income. We compare prices and recommend the best market.",
                 color: "#1BFF00",
               },
-            ].map((item, i) => (
+              {
+                icon: Cpu,
+                title: "Lack of AI tools",
+                desc: "Rural farmers rarely get access to AI. We bring disease detection, yield prediction, and voice assistant to everyone.",
+                color: "#00C3FF",
+              },
+            ].map((item) => (
               <motion.div
                 key={item.title}
                 variants={fadeInUpSmooth}
@@ -240,14 +248,14 @@ export default function Home() {
               },
               {
                 icon: BarChart3,
-                title: "Yield Prediction",
+                title: "AI Yield Prediction",
                 desc: "Accurate harvest forecasts using weather, soil, and historical data.",
                 href: "/yield-prediction",
               },
               {
                 icon: Store,
-                title: "Smart Mandi Recommendation",
-                desc: "Find the best mandis and timing to maximize your selling price.",
+                title: "Smart Mandi Intelligence",
+                desc: "Compare mandi prices and find the best market for your crop.",
                 href: "/mandi-intelligence",
               },
               {
@@ -300,28 +308,28 @@ export default function Home() {
           </motion.p>
 
           <motion.div
-            className="space-y-8"
+            className="grid sm:grid-cols-2 gap-6"
             variants={stagger}
             initial="initial"
             whileInView="animate"
             viewport={{ once: true, margin: "-40px" }}
           >
             {[
-              { step: 1, label: "Upload or capture", detail: "Take a photo of the crop leaf or upload from gallery." },
-              { step: 2, label: "AI analysis", detail: "Our model identifies disease and suggests remedies." },
-              { step: 3, label: "Get recommendations", detail: "View yield forecast and best mandi options." },
-              { step: 4, label: "Act with confidence", detail: "Apply treatments and plan harvest with data backing." },
-            ].map((item, i) => (
+              { step: 1, icon: Upload, label: "Upload crop leaf", detail: "Take a photo or upload a leaf image from your device." },
+              { step: 2, icon: Scan, label: "Detect disease", detail: "AI identifies the disease and suggests treatment." },
+              { step: 3, icon: BarChart3, label: "Predict yield", detail: "Get harvest forecasts based on crop, soil, and weather." },
+              { step: 4, icon: Store, label: "Compare mandi prices", detail: "See which mandi offers the best price for your crop." },
+            ].map((item) => (
               <motion.div
                 key={item.step}
                 variants={fadeInUpSmooth}
                 className="glass-card neon-border flex items-start gap-6 p-6 rounded-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,195,255,0.08)]"
               >
                 <motion.div
-                  className="shrink-0 w-14 h-14 rounded-full bg-linear-to-br from-[#00FF9C] to-[#00C3FF] flex items-center justify-center font-display font-bold text-[#0A0F1F] text-xl shadow-[0_0_20px_rgba(0,255,156,0.3)]"
+                  className="shrink-0 w-14 h-14 rounded-full bg-linear-to-br from-[#00FF9C] to-[#00C3FF] flex items-center justify-center shadow-[0_0_20px_rgba(0,255,156,0.3)]"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                 >
-                  {item.step}
+                  <item.icon className="w-7 h-7 text-[#0A0F1F]" />
                 </motion.div>
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-1">{item.label}</h3>
@@ -358,7 +366,7 @@ export default function Home() {
             viewport={{ once: true, margin: "-40px" }}
             variants={stagger}
           >
-            {["React", "Flask", "TensorFlow", "OpenCV", "Weather API"].map((tech) => (
+            {["Next.js", "Flask", "TensorFlow", "OpenCV", "Weather API"].map((tech) => (
               <motion.div
                 key={tech}
                 variants={fadeInUpSmooth}
@@ -397,8 +405,8 @@ export default function Home() {
             viewport={{ once: true, margin: "-40px" }}
           >
             {[
-              { value: "40%", label: "Reduce crop loss", sub: "Early disease detection" },
-              { value: "2x", label: "Increase farmer income", sub: "Better prices via smart mandi" },
+              { value: "30%", label: "Crop loss reduction", sub: "Early disease detection" },
+              { value: "Better", label: "Farmer income", sub: "Smart mandi & yield insights" },
               { value: "AI", label: "For rural India", sub: "Voice-first, language-inclusive" },
             ].map((stat) => (
               <motion.div
