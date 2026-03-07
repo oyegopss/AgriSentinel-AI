@@ -56,6 +56,13 @@ body {
   background: rgba(0, 255, 156, 0.08);
 }
 
+/* Navbar active page highlighting */
+.nav-link-active {
+  background: rgba(0, 255, 156, 0.12);
+  box-shadow: 0 0 16px rgba(0, 255, 156, 0.25);
+  border: 1px solid rgba(0, 255, 156, 0.3);
+}
+
 /* Glassmorphism cards */
 .glass-card {
   background: rgba(10, 15, 31, 0.5);
