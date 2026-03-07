@@ -1,6 +1,6 @@
 # Dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -9,18 +9,18 @@
 !.yarn/versions
 
 # Next.js
-/.next/
-/out/
+.next/
+out/
 
 # Production
-/build
-/dist
+build/
+dist/
 
 # Testing
-/coverage
+coverage/
 *.lcov
 
-# Environment variables (never commit secrets)
+# Environment (never commit API keys or secrets)
 .env
 .env.local
 .env.development.local
@@ -28,18 +28,17 @@
 .env.production.local
 .env*.local
 
-# Debug logs
+# Debug & logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 *.log
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# IDE / Editor
+# IDE
 .idea/
 .vscode/*
 !.vscode/extensions.json
@@ -53,15 +52,31 @@ Thumbs.db
 
 # Misc
 *.pem
-.cache
+.cache/
 
-# Optional: Python (if using Flask backend in same repo)
+# ─── Python / ML (training & datasets) ─────────────────────────
+# Keep these ignored (large or generated):
 __pycache__/
 *.py[cod]
 *$py.class
 .Python
 venv/
 .venv/
+.venv-datasets/
 env/
 *.egg-info/
 .eggs/
+
+# Dataset downloads (use scripts to fetch)
+datasets/
+
+# Hugging Face / cache
+.cache/
+
+# Trained Keras model (large); TF.js output is in public/model/
+*.h5
+/model/
+
+# ─── Tracked for deployment: public/model/ ──────────────────────
+# DO NOT ignore: public/model/model.json, public/model/group*.bin, public/model/class_names.json
+# (They are served by the app for client-side inference.)

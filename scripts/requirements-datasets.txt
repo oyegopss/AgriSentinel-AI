@@ -1,0 +1,11 @@
+# Dependencies for PlantVillage dataset download, training, and TF.js conversion
+# Install: pip install -r scripts/requirements-datasets.txt
+# If you see "DO NOT MATCH THE HASHES" error, run:
+#   pip install --no-cache-dir -r scripts/requirements-datasets.txt
+# (Do not add --hash=... to lines below; they cause strict hash checks that often break when PyPI updates packages.)
+datasets>=2.14.0
+huggingface_hub>=0.17.0
+Pillow>=9.0.0
+tensorflow>=2.13.0,<2.16
+tensorflow-datasets>=4.0.0
+tensorflowjs>=4.0.0

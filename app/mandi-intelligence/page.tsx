@@ -4,72 +4,73 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Store, TrendingUp, Award, BarChart3 } from "lucide-react";
+import { fetchMandiPrices } from "@/lib/mandiApi";
 
 const CROP_OPTIONS = ["Wheat", "Rice", "Maize", "Cotton", "Sugarcane"] as const;
 
 type MandiRow = {
   id: string;
+  crop: string;
   mandiName: string;
   pricePerQuintal: number;
-  distanceKm: number;
-  isBest?: boolean;
+  district: string;
 };
 
-/** Example data per crop – Wheat as in prompt; others for dropdown */
-const MANDI_BY_CROP: Record<string, MandiRow[]> = {
-  Wheat: [
-    { id: "w1", mandiName: "Kanpur Mandi", pricePerQuintal: 2100, distanceKm: 10 },
-    { id: "w2", mandiName: "Lucknow Mandi", pricePerQuintal: 2250, distanceKm: 45, isBest: true },
-    { id: "w3", mandiName: "Etawah Mandi", pricePerQuintal: 2050, distanceKm: 30 },
-  ],
-  Rice: [
-    { id: "r1", mandiName: "Kanpur Mandi", pricePerQuintal: 1850, distanceKm: 10 },
-    { id: "r2", mandiName: "Lucknow Mandi", pricePerQuintal: 1980, distanceKm: 45, isBest: true },
-    { id: "r3", mandiName: "Etawah Mandi", pricePerQuintal: 1820, distanceKm: 30 },
-  ],
-  Maize: [
-    { id: "m1", mandiName: "Kanpur Mandi", pricePerQuintal: 1950, distanceKm: 10, isBest: true },
-    { id: "m2", mandiName: "Lucknow Mandi", pricePerQuintal: 1920, distanceKm: 45 },
-    { id: "m3", mandiName: "Etawah Mandi", pricePerQuintal: 1880, distanceKm: 30 },
-  ],
-  Cotton: [
-    { id: "c1", mandiName: "Kanpur Mandi", pricePerQuintal: 6200, distanceKm: 10 },
-    { id: "c2", mandiName: "Lucknow Mandi", pricePerQuintal: 6350, distanceKm: 45, isBest: true },
-    { id: "c3", mandiName: "Etawah Mandi", pricePerQuintal: 6100, distanceKm: 30 },
-  ],
-  Sugarcane: [
-    { id: "s1", mandiName: "Kanpur Mandi", pricePerQuintal: 320, distanceKm: 10 },
-    { id: "s2", mandiName: "Lucknow Mandi", pricePerQuintal: 335, distanceKm: 45, isBest: true },
-    { id: "s3", mandiName: "Etawah Mandi", pricePerQuintal: 310, distanceKm: 30 },
-  ],
-};
-
-function getRecommendation(crop: string, rows: MandiRow[]): string {
-  const best = rows.find((r) => r.isBest);
-  const sorted = [...rows].sort((a, b) => a.pricePerQuintal - b.pricePerQuintal);
-  const nearest = sorted[0];
-  if (!best || !nearest || best.id === nearest.id)
-    return `Based on current mandi prices, ${best?.mandiName ?? "the selected mandi"} offers competitive rates for ${crop}.`;
-  const diff = best.pricePerQuintal - nearest.pricePerQuintal;
-  return `Based on current mandi prices, selling at ${best.mandiName} may increase your profit by approximately ₹${diff} per quintal compared to the nearest market.`;
+function getRecommendation(crop: string, rows: MandiRow[], bestMarket: MandiRow | null): string {
+  if (!bestMarket || rows.length === 0) {
+    return `No live mandi data available for ${crop} right now.`;
+  }
+  const nearestMarket = rows[rows.length - 1];
+  if (!nearestMarket || bestMarket.id === nearestMarket.id) {
+    return `Based on current government mandi prices, ${bestMarket.mandiName} offers competitive rates for ${crop}.`;
+  }
+  const diff = Math.max(0, bestMarket.pricePerQuintal - nearestMarket.pricePerQuintal);
+  return `Based on current government mandi prices, selling at ${bestMarket.mandiName} may increase your profit by ₹${diff} per quintal.`;
 }
 
 export default function MandiIntelligencePage() {
   const [crop, setCrop] = useState<string>(CROP_OPTIONS[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [markets, setMarkets] = useState<MandiRow[]>([]);
 
-  const rows: MandiRow[] = MANDI_BY_CROP[crop] ?? MANDI_BY_CROP.Wheat;
-  const recommendation = getRecommendation(crop, rows);
-  const maxPrice = Math.max(...rows.map((r) => r.pricePerQuintal));
+  const rows: MandiRow[] = markets;
+  const bestMarket = rows.length
+    ? rows.reduce((best, current) =>
+        current.pricePerQuintal > best.pricePerQuintal ? current : best
+      )
+    : null;
+  const recommendation = getRecommendation(crop, rows, bestMarket);
+  const maxPrice = rows.length ? Math.max(...rows.map((r) => r.pricePerQuintal)) : 1;
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     setIsLoading(true);
+    setError(null);
     setHasAnalyzed(false);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const data = await fetchMandiPrices(crop, "Uttar Pradesh");
+      const mapped: MandiRow[] = data
+        .map((record: Record<string, string>, idx: number) => ({
+          id: `${record.market ?? "market"}-${idx}`,
+          crop: record.commodity ?? crop,
+          mandiName: record.market ?? "Unknown Market",
+          pricePerQuintal: Number(record.modal_price ?? 0),
+          district: record.district ?? "Unknown District",
+        }))
+        .filter((row) => Number.isFinite(row.pricePerQuintal) && row.pricePerQuintal > 0)
+        .sort((a, b) => b.pricePerQuintal - a.pricePerQuintal)
+        .slice(0, 10);
+      setMarkets(mapped);
       setHasAnalyzed(true);
-    }, 2000);
+    } catch (err) {
+      console.error("Failed to fetch government mandi data:", err);
+      setMarkets([]);
+      setError("Unable to load government mandi data. Please try again later.");
+      setHasAnalyzed(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -120,7 +121,11 @@ export default function MandiIntelligencePage() {
               </label>
               <select
                 value={crop}
-                onChange={(e) => setCrop(e.target.value)}
+                onChange={(e) => {
+                  setCrop(e.target.value);
+                  setHasAnalyzed(false);
+                  setError(null);
+                }}
                 disabled={isLoading}
                 className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-white outline-none focus:border-[#00FF9C]/50 disabled:opacity-60"
               >
@@ -196,6 +201,13 @@ export default function MandiIntelligencePage() {
                       Mandi Price Table
                     </h2>
                   </div>
+                  {error ? (
+                    <div className="px-6 py-5 text-sm text-rose-300">{error}</div>
+                  ) : rows.length === 0 ? (
+                    <div className="px-6 py-5 text-sm text-gray-400">
+                      No markets found for {crop} in Uttar Pradesh.
+                    </div>
+                  ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -203,26 +215,28 @@ export default function MandiIntelligencePage() {
                           <th className="px-6 py-4 font-display font-semibold">Crop</th>
                           <th className="px-6 py-4 font-display font-semibold">Mandi Name</th>
                           <th className="px-6 py-4 font-display font-semibold">Price (₹ per quintal)</th>
-                          <th className="px-6 py-4 font-display font-semibold">Distance (km)</th>
+                          <th className="px-6 py-4 font-display font-semibold">District</th>
                           <th className="px-6 py-4 font-display font-semibold">Recommendation</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {rows.map((row) => (
+                        {rows.map((row) => {
+                          const isBestMarket = bestMarket !== null && row.id === bestMarket.id;
+                          return (
                           <tr
                             key={row.id}
                             className={`border-b border-white/5 transition-colors last:border-0 ${
-                              row.isBest
+                              isBestMarket
                                 ? "bg-[#00FF9C]/10 border-l-4 border-l-[#00FF9C]"
                                 : "hover:bg-white/5"
                             }`}
                           >
-                            <td className="px-6 py-4 font-medium text-white">{crop}</td>
+                            <td className="px-6 py-4 font-medium text-white">{row.crop}</td>
                             <td className="px-6 py-4 text-gray-300">{row.mandiName}</td>
                             <td className="px-6 py-4">
                               <span
                                 className={
-                                  row.isBest
+                                  isBestMarket
                                     ? "font-display font-semibold text-[#00FF9C]"
                                     : "text-gray-300"
                                 }
@@ -230,9 +244,9 @@ export default function MandiIntelligencePage() {
                                 ₹{row.pricePerQuintal.toLocaleString()}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-gray-400">{row.distanceKm} km</td>
+                            <td className="px-6 py-4 text-gray-400">{row.district}</td>
                             <td className="px-6 py-4">
-                              {row.isBest ? (
+                              {isBestMarket ? (
                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#00FF9C]/20 px-3 py-1 text-xs font-semibold text-[#00FF9C]">
                                   <Award className="h-3.5 w-3.5" />
                                   Best Market
@@ -242,10 +256,12 @@ export default function MandiIntelligencePage() {
                               )}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
+                  )}
                 </div>
 
                 {/* SECTION 3 — AI Recommendation Card (glowing green border) */}
@@ -259,36 +275,38 @@ export default function MandiIntelligencePage() {
                 </div>
 
                 {/* SECTION 4 — Profit Comparison Chart (bar chart) */}
-                <div className="glass-card neon-border rounded-2xl p-6">
-                  <h2 className="mb-6 font-display text-lg font-semibold text-white">
-                    Price comparison
-                  </h2>
-                  <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-2">
-                    {rows.map((row, i) => (
-                      <div key={row.id} className="flex flex-1 flex-col items-center gap-2">
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{
-                            height: `${(row.pricePerQuintal / maxPrice) * 100}%`,
-                          }}
-                          transition={{
-                            duration: 0.6,
-                            delay: 0.1 * i,
-                            ease: [0.22, 1, 0.36, 1],
-                          }}
-                          className="w-full max-w-[80px] min-h-[24px] rounded-t-lg bg-linear-to-t from-[#00FF9C] to-[#00C3FF]"
-                          style={{ maxHeight: "140px" }}
-                        />
-                        <span className="text-center text-xs font-medium text-gray-400">
-                          ₹{row.pricePerQuintal}
-                        </span>
-                        <span className="text-center text-xs text-gray-500">
-                          {row.mandiName.replace(" Mandi", "")}
-                        </span>
-                      </div>
-                    ))}
+                {!error && rows.length > 0 && (
+                  <div className="glass-card neon-border rounded-2xl p-6">
+                    <h2 className="mb-6 font-display text-lg font-semibold text-white">
+                      Price comparison
+                    </h2>
+                    <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-2">
+                      {rows.map((row, i) => (
+                        <div key={row.id} className="flex flex-1 flex-col items-center gap-2">
+                          <motion.div
+                            initial={{ height: 0 }}
+                            animate={{
+                              height: `${(row.pricePerQuintal / maxPrice) * 100}%`,
+                            }}
+                            transition={{
+                              duration: 0.6,
+                              delay: 0.1 * i,
+                              ease: [0.22, 1, 0.36, 1],
+                            }}
+                            className="w-full max-w-[80px] min-h-[24px] rounded-t-lg bg-linear-to-t from-[#00FF9C] to-[#00C3FF]"
+                            style={{ maxHeight: "140px" }}
+                          />
+                          <span className="text-center text-xs font-medium text-gray-400">
+                            ₹{row.pricePerQuintal}
+                          </span>
+                          <span className="text-center text-xs text-gray-500">
+                            {row.mandiName.replace(" Mandi", "")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </motion.div>
             )
           )}

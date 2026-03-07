@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Cpu,
   Scan,
+  Sparkles,
 } from "lucide-react";
 import ParticleBackground from "./components/ParticleBackground";
 
@@ -116,13 +117,23 @@ export default function Home() {
           </motion.h1>
           <motion.p
             variants={fadeInUp}
-            className="text-xl sm:text-2xl text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed"
+            className="text-xl sm:text-2xl text-gray-400 max-w-2xl mx-auto mb-3 leading-relaxed"
             animate={{
               y: [0, 4, 0],
             }}
             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1.6 }}
           >
             AI-Powered Smart Farming Intelligence Platform
+          </motion.p>
+          <motion.p
+            variants={fadeInUp}
+            className="text-base sm:text-lg text-[#00FF9C]/90 max-w-xl mx-auto mb-12 font-medium"
+            animate={{
+              y: [0, 4, 0],
+            }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1.7 }}
+          >
+            Helping 140M+ Indian farmers make smarter decisions with AI
           </motion.p>
           <motion.div
             variants={fadeInUp}
@@ -246,6 +257,12 @@ export default function Home() {
             viewport={{ once: true, margin: "-40px" }}
           >
             {[
+              {
+                icon: Sparkles,
+                title: "AI Farmer Advisor",
+                desc: "Full decision system: disease detection, yield impact, and best mandi in one flow.",
+                href: "/advisor",
+              },
               {
                 icon: Leaf,
                 title: "Crop Disease Detection",
@@ -454,30 +471,34 @@ export default function Home() {
             Upload a crop leaf image to get an instant AI diagnosis.
           </motion.p>
 
-          <motion.div
-            className="glass-card neon-border rounded-2xl border-2 border-dashed border-[#00FF9C]/40 p-12 text-center transition-all duration-300 hover:border-[#00FF9C]/60 hover:shadow-[0_0_40px_rgba(0,255,156,0.12)]"
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-40px" }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-[#00FF9C]/20 flex items-center justify-center ring-2 ring-[#00FF9C]/30">
-                <Upload className="w-10 h-10 text-[#00FF9C]" />
+          <Link href="/disease-detection">
+            <motion.div
+              className="glass-card neon-border rounded-2xl border-2 border-dashed border-[#00FF9C]/40 p-12 text-center transition-all duration-300 hover:border-[#00FF9C]/60 hover:shadow-[0_0_40px_rgba(0,255,156,0.12)] cursor-pointer"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-[#00FF9C]/20 flex items-center justify-center ring-2 ring-[#00FF9C]/30">
+                  <Upload className="w-10 h-10 text-[#00FF9C]" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold mb-1">Drop your image here or click to upload</p>
+                  <p className="text-gray-400 text-sm">PNG, JPG up to 10MB</p>
+                </div>
+                <motion.span
+                  className="btn-glow-primary mt-4 inline-block px-6 py-3 rounded-full bg-[#00FF9C] text-[#0A0F1F] font-semibold transition-all duration-300 hover:bg-[#00e08a]"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Choose file
+                </motion.span>
               </div>
-              <div>
-                <p className="text-white font-semibold mb-1">Drop your image here or click to upload</p>
-                <p className="text-gray-400 text-sm">PNG, JPG up to 10MB</p>
-              </div>
-              <motion.button
-                className="btn-glow-primary mt-4 px-6 py-3 rounded-full bg-[#00FF9C] text-[#0A0F1F] font-semibold transition-all duration-300 hover:bg-[#00e08a]"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Choose file
-              </motion.button>
-            </div>
-          </motion.div>
+            </motion.div>
+          </Link>
 
           <motion.p
             className="text-center text-gray-500 text-sm mt-6"
@@ -485,7 +506,7 @@ export default function Home() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
-            Demo placeholder — connect to your detection API to enable upload.
+            Opens the full Disease Detection tool — upload or scan with camera.
           </motion.p>
         </div>
       </section>

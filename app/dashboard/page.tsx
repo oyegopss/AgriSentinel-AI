@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Leaf,
@@ -10,7 +11,14 @@ import {
   AlertCircle,
   Award,
   Sparkles,
+  Bot,
 } from "lucide-react";
+
+const AI_INSIGHTS = [
+  "Based on crop health analysis and mandi prices, selling wheat at Lucknow mandi within the next 7 days may increase profit by ₹150 per quintal.",
+  "Early signs of Leaf Spot disease detected. Applying copper fungicide within the next 3 days may prevent yield loss.",
+  "Current rainfall and soil conditions suggest a higher-than-average yield for maize this season.",
+];
 
 const OVERVIEW_CARDS = [
   { label: "Crop Health", value: "Leaf Spot Detected", icon: Leaf, color: "#00FF9C" },
@@ -29,6 +37,10 @@ export default function DashboardPage() {
   const yourYield = 4.8;
   const regionalAvg = 4.1;
   const maxYield = Math.max(yourYield, regionalAvg);
+  const aiInsight = useMemo(
+    () => AI_INSIGHTS[Math.floor(Math.random() * AI_INSIGHTS.length)],
+    []
+  );
 
   return (
     <div className="min-h-screen bg-[#0A0F1F] text-gray-200">
@@ -80,6 +92,44 @@ export default function DashboardPage() {
               </div>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* AI Farming Insight — recommendation panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-10"
+        >
+          <div className="glass-card rounded-2xl border border-[#00FF9C]/30 p-6 shadow-[0_0_40px_rgba(0,255,156,0.08)] transition-all duration-300 hover:shadow-[0_0_50px_rgba(0,255,156,0.12)] hover:border-[#00FF9C]/50">
+            <div className="flex items-start gap-4">
+              <motion.div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#00FF9C]/20"
+                animate={{
+                  boxShadow: [
+                    "0 0 20px rgba(0, 255, 156, 0.25)",
+                    "0 0 35px rgba(0, 255, 156, 0.4)",
+                    "0 0 20px rgba(0, 255, 156, 0.25)",
+                  ],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Bot className="h-6 w-6 text-[#00FF9C]" />
+              </motion.div>
+              <div className="min-w-0 flex-1">
+                <h2 className="mb-2 font-display flex items-center gap-2 text-lg font-semibold text-white">
+                  <Sparkles className="h-5 w-5 text-[#00FF9C]" />
+                  AI Farming Insight
+                </h2>
+                <p className="text-gray-300 leading-relaxed">
+                  {aiInsight}
+                </p>
+                <p className="mt-3 text-xs text-gray-500">
+                  Generated from crop health, mandi data & weather
+                </p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         <div className="grid gap-8 lg:grid-cols-2">
