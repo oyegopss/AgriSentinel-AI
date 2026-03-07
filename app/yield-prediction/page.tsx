@@ -13,6 +13,7 @@ import {
   Layers,
   TrendingUp,
 } from "lucide-react";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const CROP_OPTIONS = ["Wheat", "Rice", "Maize", "Sugarcane", "Cotton"] as const;
 const SOIL_OPTIONS = ["Loamy", "Clay", "Sandy", "Black Soil"] as const;
@@ -122,7 +123,7 @@ export default function YieldPredictionPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-6 py-12">
+      <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -238,15 +239,8 @@ export default function YieldPredictionPage() {
                 </span>
               </motion.button>
             ) : (
-              <div className="mt-6 flex flex-col items-center justify-center gap-4 rounded-xl border border-[#00FF9C]/20 bg-[#00FF9C]/5 py-10">
-                <motion.span
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="h-10 w-10 rounded-full border-2 border-[#00FF9C]/30 border-t-[#00FF9C]"
-                />
-                <p className="font-medium text-[#00FF9C]">
-                  Running ML yield prediction model…
-                </p>
+              <div className="mt-6">
+                <LoadingSpinner message="Running ML yield prediction model…" />
               </div>
             )}
           </form>

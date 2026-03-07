@@ -54,27 +54,33 @@ export default function Home() {
       </div>
 
       {/* ========== HERO ========== */}
-      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-16 bg-grid-pattern overflow-hidden">
-        {/* Animated glowing orbs */}
+      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-12 sm:px-6 sm:pt-24 sm:pb-16 bg-grid-pattern overflow-hidden">
+        {/* Animated gradient background – neon #00FF9C, #00C3FF, #1BFF00 */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: "radial-gradient(ellipse 80% 50% at 20% 30%, rgba(0, 255, 156, 0.25), transparent), radial-gradient(ellipse 60% 40% at 80% 70%, rgba(0, 195, 255, 0.2), transparent), radial-gradient(ellipse 50% 50% at 50% 50%, rgba(27, 255, 0, 0.12), transparent)",
+            }}
+          />
           <motion.div
-            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-[#00FF9C]/20 blur-[120px]"
+            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-[#00FF9C]/25 blur-[120px]"
             animate={{
               scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
+              opacity: [0.35, 0.55, 0.35],
             }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
-            className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-[#00C3FF]/20 blur-[100px]"
+            className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-[#00C3FF]/25 blur-[100px]"
             animate={{
               scale: [1.2, 1, 1.2],
-              opacity: [0.4, 0.2, 0.4],
+              opacity: [0.45, 0.25, 0.45],
             }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
-            className="absolute top-1/2 left-1/2 w-[300px] h-[300px] rounded-full bg-[#1BFF00]/10 blur-[80px] -translate-x-1/2 -translate-y-1/2"
+            className="absolute top-1/2 left-1/2 w-[300px] h-[300px] rounded-full bg-[#1BFF00]/15 blur-[80px] -translate-x-1/2 -translate-y-1/2"
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           />
@@ -133,19 +139,19 @@ export default function Home() {
             </motion.a>
             <motion.a
               href="#demo"
-              className="btn-glow-outline group flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#00C3FF] text-[#00C3FF] font-semibold transition-all duration-300 hover:bg-[#00C3FF]/10"
+              className="btn-glow-outline group flex items-center gap-2 px-8 py-4 rounded-full border-2 border-[#00C3FF] text-[#00C3FF] font-semibold transition-all duration-300 hover:bg-[#00C3FF]/10 hover:border-[#00FF9C] hover:shadow-[0_0_30px_rgba(0,255,156,0.3)]"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
               <Play className="w-5 h-5" />
-              View Demo
+              Watch Demo
             </motion.a>
           </motion.div>
         </motion.div>
       </section>
 
       {/* ========== PROBLEM ========== */}
-      <section className="relative z-10 py-24 px-6 bg-[#0A0F1F]/80">
+      <section className="relative z-10 py-16 px-4 sm:py-24 sm:px-6 bg-[#0A0F1F]/80">
         <div className="max-w-6xl mx-auto">
           <motion.h2
             className="font-display text-3xl sm:text-4xl font-bold text-center mb-4 text-white"
@@ -216,7 +222,7 @@ export default function Home() {
       </section>
 
       {/* ========== FEATURES ========== */}
-      <section className="relative z-10 py-24 px-6 bg-grid-pattern">
+      <section className="relative z-10 py-16 px-4 sm:py-24 sm:px-6 bg-grid-pattern">
         <div className="max-w-6xl mx-auto">
           <motion.h2
             className="font-display text-3xl sm:text-4xl font-bold text-center mb-4 text-white"
@@ -268,10 +274,10 @@ export default function Home() {
               const Card = (
                 <motion.div
                   variants={fadeInUpSmooth}
-                  className="glass-card neon-border p-6 rounded-2xl transition-all duration-300 group cursor-default"
-                  whileHover={{ y: -6 }}
+                  className="glass-card neon-border p-6 rounded-2xl transition-all duration-300 group cursor-default hover:shadow-[0_0_35px_rgba(0,255,156,0.15)]"
+                  whileHover={{ y: -8, transition: { duration: 0.2 } }}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#00FF9C]/20 flex items-center justify-center mb-4 group-hover:bg-[#00FF9C]/30 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-[#00FF9C]/20 flex items-center justify-center mb-4 group-hover:bg-[#00FF9C]/30 transition-all duration-300 group-hover:scale-110">
                     <item.icon className="w-6 h-6 text-[#00FF9C]" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
@@ -291,7 +297,7 @@ export default function Home() {
       </section>
 
       {/* ========== HOW IT WORKS ========== */}
-      <section id="how-it-works" className="relative z-10 py-24 px-6 bg-[#0A0F1F]/80">
+      <section id="how-it-works" className="relative z-10 py-16 px-4 sm:py-24 sm:px-6 bg-[#0A0F1F]/80">
         <div className="max-w-4xl mx-auto">
           <motion.h2
             className="font-display text-3xl sm:text-4xl font-bold text-center mb-4 text-white"
@@ -343,7 +349,7 @@ export default function Home() {
       </section>
 
       {/* ========== TECHNOLOGY STACK ========== */}
-      <section className="relative z-10 py-24 px-6 bg-grid-pattern">
+      <section className="relative z-10 py-16 px-4 sm:py-24 sm:px-6 bg-grid-pattern">
         <div className="max-w-4xl mx-auto">
           <motion.h2
             className="font-display text-3xl sm:text-4xl font-bold text-center mb-4 text-white"
@@ -381,7 +387,7 @@ export default function Home() {
       </section>
 
       {/* ========== IMPACT ========== */}
-      <section className="relative z-10 py-24 px-6 bg-[#0A0F1F]/80">
+      <section className="relative z-10 py-16 px-4 sm:py-24 sm:px-6 bg-[#0A0F1F]/80">
         <div className="max-w-5xl mx-auto">
           <motion.h2
             className="font-display text-3xl sm:text-4xl font-bold text-center mb-4 text-white"
@@ -432,7 +438,7 @@ export default function Home() {
       </section>
 
       {/* ========== DEMO ========== */}
-      <section id="demo" className="relative z-10 py-24 px-6 bg-grid-pattern">
+      <section id="demo" className="relative z-10 py-16 px-4 sm:py-24 sm:px-6 bg-grid-pattern">
         <div className="max-w-2xl mx-auto">
           <motion.h2
             className="font-display text-3xl sm:text-4xl font-bold text-center mb-4 text-white"
@@ -485,7 +491,7 @@ export default function Home() {
       </section>
 
       {/* ========== FOOTER ========== */}
-      <footer className="relative z-10 py-12 px-6 border-t border-white/10">
+      <footer className="relative z-10 py-10 px-4 sm:py-12 sm:px-6 border-t border-white/10">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-display text-lg text-[#00FF9C] font-semibold">
             AgriSentinel AI

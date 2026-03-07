@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, ArrowLeft, Leaf, AlertCircle, CheckCircle2, Flame } from "lucide-react";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const DISEASES = [
   {
@@ -105,7 +106,7 @@ export default function DiseaseDetectionPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-6 py-12">
+      <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -205,22 +206,9 @@ export default function DiseaseDetectionPage() {
               {/* 4. Loading Animation – 2 seconds, spinner + text */}
               <AnimatePresence mode="wait">
                 {isDetecting && (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="mt-8 flex flex-col items-center justify-center gap-4 rounded-xl border border-[#00FF9C]/20 bg-[#00FF9C]/5 py-12"
-                  >
-                    <motion.span
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="h-12 w-12 rounded-full border-2 border-[#00FF9C]/30 border-t-[#00FF9C]"
-                    />
-                    <p className="font-medium text-[#00FF9C]">
-                      AI model analyzing crop health…
-                    </p>
-                  </motion.div>
+                  <div className="mt-8">
+                    <LoadingSpinner message="AI model analyzing crop health…" />
+                  </div>
                 )}
               </AnimatePresence>
             </>

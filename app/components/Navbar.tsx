@@ -72,11 +72,11 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Mobile menu button */}
+        {/* Mobile menu button – touch-friendly */}
         <button
           type="button"
           onClick={() => setMobileOpen((o) => !o)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+          className="touch-target flex items-center justify-center rounded-lg p-3 text-gray-400 transition-all duration-300 hover:bg-white/10 hover:text-white active:scale-95 md:hidden"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -99,7 +99,7 @@ export default function Navbar() {
                   key={item.label}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`rounded-lg px-4 py-3 font-display text-sm font-medium transition-all ${
+                  className={`touch-target flex items-center rounded-lg px-4 py-3 font-display text-sm font-medium transition-all duration-300 ${
                     pathname === item.href
                       ? "bg-[#00FF9C]/20 text-[#00FF9C]"
                       : "text-gray-300 hover:bg-[#00FF9C]/10 hover:text-[#00FF9C]"
