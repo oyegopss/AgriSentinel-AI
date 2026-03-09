@@ -160,4 +160,4 @@ See [LICENSE](LICENSE) in the repository (add a license file if needed).
 
 ---
 
-**AgriSentinel AI** – Crop disease detection, yield prediction, and mandi intelligence in one platform.
+**AgriSentinel AI** – AI Crop disease detection, Yield prediction, and Smart mandi intelligence in one platform.
