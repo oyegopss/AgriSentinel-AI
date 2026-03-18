@@ -1,0 +1,23 @@
+.DS_Store
+*.log
+
+# Secrets (never commit)
+.env
+.env.*
+backend/.env
+backend/.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Next
+node_modules/
+.next/
+out/
+
+# Large generated artifacts
+public/model/.venv-datasets/
+public/model/.venv*/
