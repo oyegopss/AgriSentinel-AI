@@ -4,7 +4,7 @@
 
 ## Live Demo
 
-**[https://agrisentinel-ai.vercel.app](https://agrisentinel-ai.vercel.app)**
+**[https://agrisentinel-ai.vercel.app](https://agrisentinel-ai.vercel.app)** 
 
 ---
 
