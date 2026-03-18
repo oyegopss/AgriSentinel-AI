@@ -19,6 +19,10 @@ class AgentRequest(BaseModel):
         None,
         description="Optional risk prediction payload (e.g. from /risk-predict).",
     )
+    yield_data: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Optional yield payload (e.g. from yield predictor / advisor).",
+    )
 
 
 @router.post("/ai-agent")
@@ -44,6 +48,7 @@ def ai_agent_endpoint(payload: AgentRequest) -> Dict[str, Any]:
         "user_query": payload.query,
         "disease_result": disease_result,
         "risk_data": payload.risk,
+        "yield_data": payload.yield_data,
         "profile": profile,
         "farm": farm,
     }

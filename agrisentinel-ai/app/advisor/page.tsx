@@ -277,15 +277,29 @@ export default function AdvisorPage() {
           query: contextQuery,
           disease: disease.disease,
           risk: riskResponse,
+          yield_data: { base_yield: base, adjusted_yield: adjusted, loss_pct: lossPct },
         });
         setAiCost(ai.estimated_cost ?? null);
         setAiUrgency(ai.urgency ?? null);
+        try {
+          localStorage.setItem(
+            "agrisentinel_context",
+            JSON.stringify({
+              disease: disease.disease,
+              risk: riskResponse,
+              yield_data: { base_yield: base, adjusted_yield: adjusted, loss_pct: lossPct },
+            })
+          );
+        } catch {
+          // ignore storage errors
+        }
         setRecommendation(
           `AI FARM RECOMMENDATION\n\n` +
             `Urgency: ${ai.urgency}\n` +
             `Estimated cost: ${ai.estimated_cost}\n\n` +
             `${ai.advice}\n\n` +
-            `Recommended action:\n${ai.recommended_action}`
+            `Recommended action:\n${ai.recommended_action}\n\n` +
+            `Timeline:\n${ai.timeline ?? "Next 3–5 days"}`
         );
       } catch {
         const sellAdvice = best ? `${treatment} Sell crop at ${best.market} for maximum profit.` : treatment;

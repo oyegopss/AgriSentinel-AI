@@ -24,6 +24,7 @@ class AdviceResult:
     urgency: UrgencyLevel
     recommended_action: str
     estimated_cost: str
+    timeline: str
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -31,6 +32,7 @@ class AdviceResult:
             "urgency": self.urgency,
             "recommended_action": self.recommended_action,
             "estimated_cost": self.estimated_cost,
+            "timeline": self.timeline,
         }
 
 
@@ -49,6 +51,7 @@ def _build_user_prompt(
     user_query: str,
     disease_result: Optional[Dict[str, Any]] = None,
     risk_data: Optional[Dict[str, Any]] = None,
+    yield_data: Optional[Dict[str, Any]] = None,
     profile: Optional[Dict[str, Any]] = None,
     farm: Optional[Dict[str, Any]] = None,
 ) -> str:
@@ -63,6 +66,8 @@ def _build_user_prompt(
         context["disease_result"] = disease_result
     if risk_data:
         context["risk_data"] = risk_data
+    if yield_data:
+        context["yield_data"] = yield_data
     if profile:
         context["farmer_profile"] = {
             "name": profile.get("name"),
@@ -81,9 +86,13 @@ def _build_user_prompt(
 
     lines.append(json.dumps(context, ensure_ascii=False, indent=2))
     lines.append(
-        "\nRespond with concise, field-ready guidance. "
-        "Assume the farmer may not have access to advanced lab tests. "
-        "If farm_area_acres is given, make estimated_cost scale by farm area (e.g. per-acre cost × acres)."
+        "\nYou MUST respond as STRICT JSON with EXACTLY these keys:\n"
+        '{ "advice": string, "urgency": "Low"|"Medium"|"High", "recommended_action": string, "estimated_cost": string, "timeline": string }\n\n'
+        "Guidelines:\n"
+        "- Act as an Indian agricultural expert (practical, locally realistic inputs).\n"
+        "- Provide: what to do, when to do it (timeline), and a cost estimate (scale by farm area if available).\n"
+        "- If you suggest a spray, mention timing (morning/evening), re-entry interval, and basic safety.\n"
+        "- Avoid generic motivation. Be specific and concise."
     )
     return "\n".join(lines)
 
@@ -99,6 +108,7 @@ def _parse_llm_json(text: str) -> AdviceResult:
             urgency="Medium",
             recommended_action="Review advice above and take steps as feasible in the next 3–5 days.",
             estimated_cost="₹0–₹2000 (approx.)",
+            timeline="Next 3–5 days",
         )
 
     advice = str(data.get("advice") or "No advice provided.").strip()
@@ -112,12 +122,14 @@ def _parse_llm_json(text: str) -> AdviceResult:
         or "Implement basic sanitation, monitoring and recommended sprays based on local guidance."
     ).strip()
     estimated_cost = str(data.get("estimated_cost") or "₹0–₹2000 (approx.)").strip()
+    timeline = str(data.get("timeline") or "Next 3–5 days").strip()
 
     return AdviceResult(
         advice=advice,
         urgency=urgency,
         recommended_action=recommended_action,
         estimated_cost=estimated_cost,
+        timeline=timeline,
     )
 
 
@@ -194,6 +206,7 @@ def _mock_advice(
     user_query: str,
     disease_result: Optional[Dict[str, Any]],
     risk_data: Optional[Dict[str, Any]],
+    yield_data: Optional[Dict[str, Any]] = None,
     profile: Optional[Dict[str, Any]] = None,
     farm: Optional[Dict[str, Any]] = None,
 ) -> AdviceResult:
@@ -247,6 +260,7 @@ def _mock_advice(
         urgency=urgency,
         recommended_action=recommended_action,
         estimated_cost=est_cost,
+        timeline="Today: scouting + sanitation. Next 24–48h: spray if spread/risk is high. Recheck after 3–5 days.",
     )
 
 
@@ -276,18 +290,19 @@ def generate_advice(input_data: Dict[str, Any]) -> Dict[str, Any]:
     user_query = str(input_data.get("user_query") or "").strip()
     disease_result = input_data.get("disease_result") or None
     risk_data = input_data.get("risk_data") or None
+    yield_data = input_data.get("yield_data") or None
     profile = input_data.get("profile") or None
     farm = input_data.get("farm") or None
 
     if not user_query:
         user_query = "Farmer asks for guidance on current crop condition and next 7-day plan."
 
-    prompt = _build_user_prompt(user_query, disease_result, risk_data, profile=profile, farm=farm)
+    prompt = _build_user_prompt(user_query, disease_result, risk_data, yield_data=yield_data, profile=profile, farm=farm)
 
     # Try real LLM first; fall back to deterministic mock if anything fails
     result = _call_openai(prompt)
     if result is None:
-        result = _mock_advice(user_query, disease_result, risk_data, profile=profile, farm=farm)
+        result = _mock_advice(user_query, disease_result, risk_data, yield_data=yield_data, profile=profile, farm=farm)
 
     return result.as_dict()
 

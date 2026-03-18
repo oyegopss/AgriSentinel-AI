@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Loader2, Send } from "lucide-react";
+import { MessageCircle, X, Loader2, Send, Sparkles } from "lucide-react";
 import { getAIAgentResponse } from "@/lib/api";
+
+type StoredContext = {
+  disease?: string | null;
+  risk?: unknown;
+  yield_data?: unknown;
+};
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -11,18 +17,42 @@ export default function ChatWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [meta, setMeta] = useState<{ urgency?: string; estimated_cost?: string } | null>(null);
+  const [meta, setMeta] = useState<{ urgency?: string; estimated_cost?: string; timeline?: string } | null>(null);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const quickPrompts = [
+    { label: "What should I spray?", text: "What should I spray right now? Give product options, dose, and safety." },
+    { label: "How to reduce risk?", text: "How can I reduce disease risk in the next 7 days? Give a practical plan." },
+    { label: "Expected loss?", text: "What yield loss should I expect, and what actions reduce it fastest?" },
+  ] as const;
+
+  const loadContext = (): StoredContext => {
+    try {
+      const raw = localStorage.getItem("agrisentinel_context");
+      if (!raw) return {};
+      const data = JSON.parse(raw) as StoredContext;
+      return data && typeof data === "object" ? data : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const handleSend = async (overrideText?: string) => {
+    const finalText = (overrideText ?? input).trim();
+    if (!finalText || isLoading) return;
     setIsLoading(true);
     setError(null);
     setAnswer(null);
     setMeta(null);
     try {
-      const res = await getAIAgentResponse({ query: input.trim() });
+      const ctx = loadContext();
+      const res = await getAIAgentResponse({
+        query: finalText,
+        disease: ctx.disease ?? undefined,
+        risk: ctx.risk,
+        yield_data: ctx.yield_data,
+      });
       setAnswer(res.advice);
-      setMeta({ urgency: res.urgency, estimated_cost: res.estimated_cost });
+      setMeta({ urgency: res.urgency, estimated_cost: res.estimated_cost, timeline: res.timeline });
     } catch (err) {
       console.error("AI agent call failed", err);
       setError("AI assistant is unavailable right now. Please try again.");
@@ -30,6 +60,8 @@ export default function ChatWidget() {
       setIsLoading(false);
     }
   };
+
+  const handleSendClick = () => handleSend();
 
   return (
     <>
@@ -80,6 +112,9 @@ export default function ChatWidget() {
                   {meta?.urgency && (
                     <p className="mb-1 text-[11px] font-semibold text-amber-400">Urgency: {meta.urgency}</p>
                   )}
+                  {meta?.timeline && (
+                    <p className="mb-1 text-[11px] font-semibold text-[#00FF9C]/80">Timeline: {meta.timeline}</p>
+                  )}
                   <p className="whitespace-pre-wrap text-xs leading-relaxed">{answer}</p>
                   {meta?.estimated_cost && (
                     <p className="mt-2 text-[11px] text-gray-400">Estimated cost: {meta.estimated_cost}</p>
@@ -92,6 +127,24 @@ export default function ChatWidget() {
                   <span>Thinking like an agronomist…</span>
                 </div>
               )}
+            </div>
+
+            <div className="mb-3 flex flex-wrap gap-2">
+              {quickPrompts.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setInput(p.text);
+                    handleSend(p.text);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] text-gray-300 transition hover:bg-white/10 disabled:opacity-50"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-[#00FF9C]" />
+                  {p.label}
+                </button>
+              ))}
             </div>
 
             <div className="flex items-center gap-2">
@@ -110,7 +163,7 @@ export default function ChatWidget() {
               />
               <button
                 type="button"
-                onClick={handleSend}
+                onClick={handleSendClick}
                 disabled={isLoading || !input.trim()}
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#00FF9C] text-[#0A0F1F] disabled:opacity-50"
               >

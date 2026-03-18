@@ -98,6 +98,7 @@ export type AIAgentRequest = {
   query: string;
   disease?: string | null;
   risk?: unknown;
+  yield_data?: unknown;
 };
 
 export type AIAgentResponse = {
@@ -105,6 +106,7 @@ export type AIAgentResponse = {
   urgency: "Low" | "Medium" | "High" | string;
   recommended_action: string;
   estimated_cost: string;
+  timeline: string;
 };
 
 export async function getAIAgentResponse(data: AIAgentRequest): Promise<AIAgentResponse> {
