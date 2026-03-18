@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="224" height="224" viewBox="0 0 224 224">
+  <rect width="224" height="224" fill="#1a2a1a"/>
+  <ellipse cx="112" cy="120" rx="65" ry="85" fill="#3d7a2d" stroke="#5a9a4a" stroke-width="2"/>
+  <line x1="112" y1="40" x2="112" y2="200" stroke="#2a5a1a" stroke-width="2"/>
+  <circle cx="90" cy="80" r="10" fill="#3a2a10" stroke="#5a3a15" stroke-width="1.5"/>
+  <circle cx="130" cy="100" r="8" fill="#4a3515" stroke="#6a4a20" stroke-width="1.5"/>
+  <circle cx="100" cy="130" r="12" fill="#3a2a10" stroke="#5a3a15" stroke-width="1.5"/>
+  <circle cx="128" cy="155" r="9" fill="#4a3515" stroke="#6a4a20" stroke-width="1.5"/>
+  <circle cx="88" cy="160" r="7" fill="#3a2a10" stroke="#5a3a15" stroke-width="1.5"/>
+  <circle cx="115" cy="180" r="6" fill="#4a3515" stroke="#6a4a20" stroke-width="1"/>
+  <text x="112" y="218" text-anchor="middle" fill="#a08050" font-family="sans-serif" font-size="11">Leaf Spot</text>
+</svg>
