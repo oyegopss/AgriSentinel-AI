@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, ArrowLeft, Leaf, AlertCircle, CheckCircle2, Flame, Loader2, Check, HelpCircle, Camera, Sparkles, Shield, Bug, Sun, Droplets, ImageIcon } from "lucide-react";
 type TF = typeof import("@tensorflow/tfjs");
+type MobileNetModule = typeof import("@tensorflow-models/mobilenet");
 
 const LABELS = ["Healthy Leaf", "Leaf Spot", "Rust Disease", "Powdery Mildew"] as const;
 
@@ -40,6 +41,13 @@ const DISEASES = [
     treatment: "No action needed. Continue regular monitoring and maintain good irrigation and nutrition practices.",
     icon: CheckCircle2,
     color: "#00FF9C",
+  },
+  {
+    name: "Invalid Image",
+    treatment: "Please upload a clear leaf image.",
+    icon: ImageIcon,
+    color: "#fb7185",
+    message: "⚠ This does not appear to be a valid leaf image",
   },
   {
     name: "Powdery Mildew",
@@ -88,6 +96,13 @@ const AI_INSIGHTS: Record<string, DiseaseInsight> = {
     yieldImpact: "No yield impact expected. The crop is on track for normal harvest potential.",
     prevention: ["Maintain regular watering schedule", "Ensure balanced nutrient supply", "Monitor for early signs of stress", "Rotate crops seasonally"],
   },
+  "Invalid Image": {
+    explanation:
+      "The model is not confident this photo contains a clear leaf. This usually happens with blurry images, non-leaf objects, very dark lighting, or the leaf being too small in the frame.",
+    causes: ["Leaf not visible or too small", "Blur / motion", "Poor lighting or heavy shadows", "Background dominates the image"],
+    yieldImpact: "No recommendation can be made until a valid leaf image is provided.",
+    prevention: ["Take a close-up of a single leaf", "Use good daylight lighting", "Keep a plain background behind the leaf", "Ensure the leaf fills most of the frame"],
+  },
   "Leaf Spot": {
     explanation: "Leaf spot diseases are caused by various fungal or bacterial pathogens that create localized necrotic lesions on the leaf surface, reducing the plant's photosynthetic capacity.",
     causes: ["Fungal pathogens (Cercospora, Septoria, Alternaria)", "Bacterial infections", "High humidity and prolonged leaf wetness", "Poor air circulation between plants"],
@@ -126,6 +141,11 @@ const TREATMENT_DETAILS: Record<string, TreatmentDetail> = {
     preventive: ["Continue regular monitoring", "Maintain current care practices"],
     practices: ["Balanced fertilization", "Proper irrigation schedule", "Crop rotation"],
   },
+  "Invalid Image": {
+    fungicide: "Not applicable",
+    preventive: ["Upload a clear leaf image", "Use good lighting and a plain background"],
+    practices: ["Hold camera steady", "Focus on one leaf", "Avoid zoom blur; move closer instead"],
+  },
   "Leaf Spot": {
     fungicide: "Copper hydroxide, Chlorothalonil, or Mancozeb",
     preventive: ["Remove infected leaves immediately", "Avoid overhead irrigation", "Space plants for airflow"],
@@ -151,9 +171,37 @@ const TREATMENT_DETAILS: Record<string, TreatmentDetail> = {
 const PIPELINE_STEPS = [
   "Uploading image",
   "Preprocessing leaf image",
+  "Validating leaf image",
   "Running CNN inference",
   "Generating prediction",
 ] as const;
+
+let mobilenetPromise: Promise<import("@tensorflow-models/mobilenet").MobileNet> | null = null;
+async function getMobileNet(): Promise<import("@tensorflow-models/mobilenet").MobileNet> {
+  if (!mobilenetPromise) {
+    mobilenetPromise = (async () => {
+      const mnet: MobileNetModule = await import("@tensorflow-models/mobilenet");
+      // v2 is more accurate; alpha 0.75 is a good speed/quality tradeoff.
+      return mnet.load({ version: 2, alpha: 0.75 });
+    })();
+  }
+  return mobilenetPromise;
+}
+
+function looksLikeLeaf(labels: string[]): boolean {
+  const joined = labels.join(" ").toLowerCase();
+  // Broad keyword gate for demo: plant/leaf/tree/flower/grass/vegetation.
+  return (
+    joined.includes("leaf") ||
+    joined.includes("plant") ||
+    joined.includes("tree") ||
+    joined.includes("flower") ||
+    joined.includes("grass") ||
+    joined.includes("vegetation") ||
+    joined.includes("herb") ||
+    joined.includes("foliage")
+  );
+}
 
 /** Grad-CAM: find last Conv2D layer in a loaded Layers model. */
 function findLastConvLayer(
@@ -266,6 +314,8 @@ function severityForDisease(diseaseName: string): SeverityLevel {
   switch (diseaseName) {
     case "Healthy Leaf":
       return "No Risk";
+    case "Invalid Image":
+      return "Low Risk";
     case "Leaf Spot":
       return "Moderate Risk";
     case "Rust Disease":
@@ -283,6 +333,7 @@ export type PredictionResult = (typeof DISEASES)[number] & {
   confidence: number;
   severity: SeverityLevel;
   analysisTimeSec: number;
+  warning?: string;
   topPredictions?: { label: string; probability: number }[];
   inferenceTimeMs?: number;
   gradCamTimeMs?: number;
@@ -461,6 +512,13 @@ function severityStyle(severity: SeverityLevel): { bg: string; text: string; bor
   }
 }
 
+/** Trust indicator: label + color-coded badge classes from confidence %. */
+function confidenceTrust(confidence: number): { label: string; badge: string } {
+  if (confidence > 80) return { label: "High Confidence ✅", badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" };
+  if (confidence >= 60) return { label: "Moderate Confidence ⚠", badge: "bg-amber-500/15 text-amber-300 border-amber-500/40" };
+  return { label: "Low Confidence ❌", badge: "bg-rose-500/15 text-rose-300 border-rose-500/40" };
+}
+
 export default function DiseaseDetectionPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -615,7 +673,38 @@ export default function DiseaseDetectionPage() {
         imgOrCanvas = img;
       }
       await new Promise((r) => setTimeout(r, 100));
+
+      // Step: validate leaf vs non-leaf (lightweight gate)
       setPipelineStep(3);
+      try {
+        const mnet = await getMobileNet();
+        const preds = await mnet.classify(imgOrCanvas as any, 5);
+        const topLabels = preds.map((p) => p.className);
+        const topConf = preds[0]?.probability ?? 0;
+        // Reject if MobileNet doesn't see plant/leaf/tree-like content.
+        // Also reject if top confidence is extremely low (likely noise / wrong object).
+        if (!looksLikeLeaf(topLabels) || topConf < 0.15) {
+          const invalid = DISEASES.find((d) => d.name === "Invalid Image")!;
+          const analysisTimeSec = Math.round((performance.now() - startTime) / 100) / 10;
+          tf.dispose([imageTensor]);
+          setHeatmapDataUrl(null);
+          setResult({
+            ...invalid,
+            confidence: Math.round(topConf * 1000) / 10,
+            severity: severityForDisease(invalid.name),
+            analysisTimeSec,
+            topPredictions: topLabels.slice(0, 3).map((l, idx) => ({
+              label: l,
+              probability: Math.round((preds[idx]?.probability ?? 0) * 1000) / 10,
+            })),
+          });
+          return;
+        }
+      } catch (e) {
+        // If MobileNet fails to load (offline etc.), don't block disease detection.
+        console.warn("Leaf validation skipped:", e);
+      }
+
       const inferenceStart = performance.now();
       let out: import("@tensorflow/tfjs").Tensor;
       let convOut: import("@tensorflow/tfjs").Tensor | null = null;
@@ -640,31 +729,42 @@ export default function DiseaseDetectionPage() {
         );
         return;
       }
-      const maxIdx = probArr.indexOf(Math.max(...probArr));
-      const maxProb = probArr[maxIdx] ?? 0;
+      const indexed = probArr.map((p, i) => ({ i, p }));
+      indexed.sort((a, b) => b.p - a.p);
+      const maxIdx = indexed[0]?.i ?? 0;
+      const maxProb = indexed[0]?.p ?? 0;
       const confidence = Math.round(maxProb * 1000) / 10;
       const predictedClass = numClasses > 0 && classNames[maxIdx]
         ? classNames[maxIdx]!
         : LABELS[Math.min(maxIdx, LABELS.length - 1)]!;
       console.log("Predicted class:", predictedClass);
       console.log("Top probabilities:", probArr.slice().sort((a, b) => b - a).slice(0, 5));
-      const CONFIDENCE_THRESHOLD = 0.55;
-      const disease =
-        maxProb < CONFIDENCE_THRESHOLD
-          ? DISEASES.find((d) => d.name === "Uncertain Leaf Condition")!
-          : (() => {
-              const diseaseName = numClasses > 0 && classNames[maxIdx]
-                ? plantVillageToLabel(classNames[maxIdx]!)
-                : LABELS[Math.min(maxIdx, LABELS.length - 1)]! as (typeof LABELS)[number];
-              return DISEASES.find((d) => d.name === diseaseName) ?? DISEASES[0]!;
-            })();
+      const LOW_CONFIDENCE_WARNING_THRESHOLD = 0.4;
+      const UNCERTAIN_TOP2_GAP = 0.1;
+      const top2Gap =
+        typeof indexed[1]?.p === "number" ? Math.abs((indexed[0]?.p ?? 0) - indexed[1]!.p) : 1;
+
+      const warning =
+        maxProb < LOW_CONFIDENCE_WARNING_THRESHOLD ? "Low confidence prediction" : undefined;
+
+      const disease = (() => {
+        // 1) If top predictions are too close, mark as uncertain
+        if (top2Gap < UNCERTAIN_TOP2_GAP) {
+          return DISEASES.find((d) => d.name === "Uncertain Leaf Condition")!;
+        }
+
+        // 2) Normal mapping (even if confidence is low; we show a warning instead)
+        const diseaseName =
+          numClasses > 0 && classNames[maxIdx]
+            ? plantVillageToLabel(classNames[maxIdx]!)
+            : (LABELS[Math.min(maxIdx, LABELS.length - 1)]! as (typeof LABELS)[number]);
+        return DISEASES.find((d) => d.name === diseaseName) ?? DISEASES[0]!;
+      })();
       const analysisTimeSec = Math.round((performance.now() - startTime) / 100) / 10;
       const getRawLabel = (idx: number) =>
         numClasses > 0 && classNames[idx]
           ? classNames[idx]!.replace(/___/g, " — ").replace(/_/g, " ")
           : LABELS[Math.min(idx, LABELS.length - 1)]!;
-      const indexed = probArr.map((p, i) => ({ i, p }));
-      indexed.sort((a, b) => b.p - a.p);
       const top3 = indexed.slice(0, 3).map(({ i, p }) => ({
         label: getRawLabel(i),
         probability: Math.round(p * 1000) / 10,
@@ -692,6 +792,7 @@ export default function DiseaseDetectionPage() {
         confidence: Math.min(100, Math.max(0, confidence)),
         severity: severityForDisease(disease.name),
         analysisTimeSec,
+        warning,
         topPredictions: top3,
         inferenceTimeMs,
         gradCamTimeMs,
@@ -833,13 +934,24 @@ export default function DiseaseDetectionPage() {
               {result && (
                 <div className="mt-6 space-y-4 border-t border-white/10 pt-6">
                   <p className="text-sm font-medium text-gray-400">Prediction:</p>
-                  <p className="font-display text-xl font-bold text-white">
-                    {result.name}
-                    <span className="ml-2 font-semibold" style={{ color: result.color }}>
-                      — {result.confidence}%
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-display text-xl font-bold text-white">
+                      {result.name}
+                      <span className="ml-2 font-semibold" style={{ color: result.color }}>
+                        — {result.confidence}%
+                      </span>
+                    </p>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${confidenceTrust(result.confidence).badge}`}
+                    >
+                      {confidenceTrust(result.confidence).label}
                     </span>
+                  </div>
+                  <p className="text-xs text-gray-500">Higher confidence means more reliable prediction.</p>
+                  <p className="text-xs text-gray-500">
+                    Note: This AI model works best with clear images of plant leaves. Results may vary for unclear or non-standard images.
                   </p>
-                  {heatmapDataUrl != null && imagePreview && (
+                  {result.name !== "Invalid Image" && heatmapDataUrl != null && imagePreview && (
                     <div className="rounded-lg border border-white/10 bg-white/5 p-4">
                       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-gray-300">
@@ -1196,6 +1308,49 @@ export default function DiseaseDetectionPage() {
                 transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="glass-card neon-border mt-4 overflow-hidden rounded-2xl p-6 transition-all duration-300 sm:p-8"
               >
+              {result.name === "Invalid Image" && (
+                <div
+                  role="alert"
+                  className="mb-5 flex items-start gap-3 rounded-xl border border-rose-500/50 bg-rose-500/10 px-4 py-3 text-rose-100 shadow-[0_0_35px_rgba(244,63,94,0.18)]"
+                >
+                  <div className="relative mt-0.5 shrink-0">
+                    <span className="absolute -inset-1 rounded-full bg-rose-500/25 blur-md animate-pulse" />
+                    <AlertCircle className="relative h-5 w-5 text-rose-300" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-rose-50">⚠ This image does not appear to be a plant leaf</p>
+                    <p className="mt-0.5 text-sm text-rose-100/80">Upload a clear leaf image with good lighting.</p>
+                  </div>
+                </div>
+              )}
+              {result.name === "Uncertain Leaf Condition" && (
+                <div
+                  role="alert"
+                  className="mb-5 flex items-start gap-3 rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-amber-100"
+                >
+                  <HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                  <div>
+                    <p className="font-semibold text-amber-50">Uncertain result</p>
+                    <p className="mt-0.5 text-sm text-amber-100/80">
+                      Top predictions are too close. Try a clearer close-up leaf photo for a confident diagnosis.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {result.warning && result.name !== "Invalid Image" && (
+                <div
+                  role="alert"
+                  className="mb-5 flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-100"
+                >
+                  <HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                  <div>
+                    <p className="font-semibold text-amber-50">{result.warning}</p>
+                    <p className="mt-0.5 text-sm text-amber-100/80">
+                      Try a clearer close-up leaf image for a more reliable prediction.
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
                 <div
                   className="flex h-12 w-12 items-center justify-center rounded-xl"
@@ -1217,16 +1372,21 @@ export default function DiseaseDetectionPage() {
                   <span className="text-gray-400">Disease: </span>
                   <span className="font-semibold text-white">{result.name}</span>
                 </div>
-                <div className="rounded-lg bg-white/5 px-4 py-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-400">
-                      Confidence Score
-                    </span>
+                <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Confidence Score
+                  </p>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span
-                      className="font-display text-lg font-bold tabular-nums"
+                      className="font-display text-2xl font-bold tabular-nums"
                       style={{ color: result.color }}
                     >
                       {result.confidence}%
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold ${confidenceTrust(result.confidence).badge}`}
+                    >
+                      {confidenceTrust(result.confidence).label}
                     </span>
                   </div>
                   <div className="h-3 w-full overflow-hidden rounded-full bg-white/10">
@@ -1236,7 +1396,7 @@ export default function DiseaseDetectionPage() {
                         boxShadow: "0 0 20px rgba(0, 255, 156, 0.6), 0 0 40px rgba(0, 255, 156, 0.3)",
                       }}
                       initial={{ width: 0 }}
-                      animate={{ width: `${result.confidence}%` }}
+                      animate={{ width: `${Math.min(100, result.confidence)}%` }}
                       transition={{
                         duration: 1,
                         delay: 0.25,
@@ -1244,6 +1404,12 @@ export default function DiseaseDetectionPage() {
                       }}
                     />
                   </div>
+                  <p className="mt-3 text-xs text-gray-500">
+                    Higher confidence means more reliable prediction.
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Note: This AI model works best with clear images of plant leaves. Results may vary for unclear or non-standard images.
+                  </p>
                 </div>
                 {result.topPredictions && result.topPredictions.length > 0 && (
                   <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-4">
@@ -1279,6 +1445,7 @@ export default function DiseaseDetectionPage() {
                   </span>
                 </div>
                 {/* AI Crop Advisor Card */}
+                {result.name !== "Invalid Image" && (
                 <div className="rounded-xl border border-[#00C3FF]/30 bg-[#00C3FF]/5 p-5">
                   <div className="mb-4 flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00C3FF]/20">
@@ -1318,6 +1485,7 @@ export default function DiseaseDetectionPage() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* AI Insight Card */}
                 {AI_INSIGHTS[result.name] && (
@@ -1360,7 +1528,7 @@ export default function DiseaseDetectionPage() {
                   </div>
                 )}
 
-                {heatmapDataUrl != null && imagePreview && (
+                {result.name !== "Invalid Image" && heatmapDataUrl != null && imagePreview && (
                   <div className="rounded-lg border border-white/10 bg-white/5 p-4">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-gray-300">

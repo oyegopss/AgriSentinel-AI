@@ -28,6 +28,19 @@ export type YieldSignal = {
   adjustedYield: number | null;
 };
 
+export type SmartDecisionInput = {
+  disease_result: DiseaseSignal | null;
+  risk_data: RiskSignal | null;
+  mandi_prices: MandiPriceSignal | null;
+  yield_data: YieldSignal | null;
+};
+
+export type SmartDecisionOutput = {
+  decision: "Treat Immediately" | "Sell Now" | "Wait & Monitor";
+  reason: string;
+  expected_profit_impact: string;
+};
+
 export type DecisionOutput = {
   final_decision: "Sell Now" | "Wait" | "Treat";
   reason: string;
@@ -72,6 +85,118 @@ function priceAttractive(m: MandiPriceSignal | null | undefined): boolean {
 function priceWeak(m: MandiPriceSignal | null | undefined): boolean {
   if (!m || m.bestPrice == null || m.breakevenPrice == null) return false;
   return m.bestPrice <= m.breakevenPrice * 1.03; // ≤3% above breakeven
+}
+
+function profitDeltaPerQuintal(m: MandiPriceSignal | null | undefined): number | null {
+  if (!m || m.bestPrice == null || m.breakevenPrice == null) return null;
+  return Math.round(m.bestPrice - m.breakevenPrice);
+}
+
+function yieldLossPct(y: YieldSignal | null | undefined): number | null {
+  const base = y?.baseYield ?? null;
+  const adj = y?.adjustedYield ?? null;
+  if (base == null || adj == null || base <= 0) return null;
+  return Math.max(0, Math.round((1 - adj / base) * 100));
+}
+
+/**
+ * Smart decision engine (explainable rules).
+ *
+ * Priority:
+ * 1) Treat Immediately: severe disease + high weather risk
+ * 2) Sell Now: market price attractive and risk/disease could reduce quality/value
+ * 3) Wait & Monitor: low weather risk and price not exceptional
+ */
+export function smartDecisionEngine(input: SmartDecisionInput): SmartDecisionOutput {
+  const disease = input.disease_result;
+  const risk = input.risk_data;
+  const mandi = input.mandi_prices;
+  const y = input.yield_data;
+
+  const highDisease = isHighDisease(disease);
+  const moderateDisease = isModerateDisease(disease);
+  const highRisk = isHighRisk(risk);
+  const lowRisk = isLowRisk(risk);
+  const goodPrice = priceAttractive(mandi);
+  const weakPrice = priceWeak(mandi);
+  const delta = profitDeltaPerQuintal(mandi);
+  const loss = yieldLossPct(y);
+
+  // 1) Treat Immediately
+  if (highDisease && highRisk) {
+    const parts: string[] = [
+      "Disease severity is high and the next-weather risk is also high, which can accelerate spread in 3–7 days.",
+    ];
+    if (loss != null && loss > 0) parts.push(`Current yield impact is estimated around ${loss}%.`);
+    if (weakPrice) {
+      parts.push("Mandi price is not very attractive right now, so protecting yield is the higher-value move.");
+    }
+    return {
+      decision: "Treat Immediately",
+      reason: parts.join(" "),
+      expected_profit_impact:
+        loss != null && loss > 0
+          ? `Preventing further spread can protect ~${loss}% of yield/quality; recheck in 3–5 days after treatment.`
+          : "Treatment now reduces near-term downside risk; recheck in 3–5 days.",
+    };
+  }
+
+  // 2) Sell Now
+  if (goodPrice) {
+    const parts: string[] = [
+      "Market price is significantly above your breakeven, so locking in value is attractive.",
+    ];
+    if (highRisk || moderateDisease) {
+      parts.push("Weather risk and/or disease pressure could reduce quality and marketability if you wait.");
+    } else {
+      parts.push("Even with moderate risk, the price premium justifies selling a portion now.");
+    }
+
+    const deltaText = delta != null ? `~₹${delta}/q above breakeven` : "above breakeven";
+    const lossText = loss != null && loss > 0 ? ` and avoid compounding an estimated ${loss}% loss` : "";
+
+    return {
+      decision: "Sell Now",
+      reason: parts.join(" "),
+      expected_profit_impact:
+        `Selling now captures ${deltaText}${lossText}. Consider partial harvest if the crop isn't fully ready.`,
+    };
+  }
+
+  // 3) Wait & Monitor
+  if (lowRisk) {
+    const parts: string[] = [
+      "Weather-based disease risk is low, so immediate aggressive action is not necessary.",
+    ];
+    if (delta != null && delta <= 0) {
+      parts.push("Current mandi price is near or below breakeven, so waiting can improve returns.");
+    } else if (delta != null) {
+      parts.push("Price is only slightly above breakeven; waiting for a better window can help.");
+    }
+    if (loss != null && loss <= 5) {
+      parts.push("Estimated yield impact is small, so holding the crop briefly is reasonable.");
+    }
+    return {
+      decision: "Wait & Monitor",
+      reason: parts.join(" "),
+      expected_profit_impact:
+        "Monitor twice per week; if risk rises to High or symptoms spread, switch to treatment. If mandi price jumps ≥15% above breakeven, consider selling.",
+    };
+  }
+
+  // Default: mixed signals → conservative monitor + targeted action
+  const parts: string[] = [
+    "Signals are mixed (moderate risk/price). Use a balanced approach: protect the crop modestly and stay ready to sell if prices improve.",
+  ];
+  if (moderateDisease) parts.push("A single protective spray + sanitation pass can stabilise yield while you watch the market.");
+  return {
+    decision: "Wait & Monitor",
+    reason: parts.join(" "),
+    expected_profit_impact:
+      delta != null
+        ? `Maintain yield while watching prices (currently ~₹${delta}/q vs breakeven).`
+        : "Maintain yield while watching prices; switch quickly if risk or symptoms rise.",
+  };
 }
 
 export function decideAction(

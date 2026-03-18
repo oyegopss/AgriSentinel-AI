@@ -11,8 +11,8 @@ type Props = {
 
 export default function AlertBanner({
   show,
-  title = "High risk",
-  message = "Disease risk is high or a disease has been detected. Review recommendations and take action.",
+  title = "⚠ High Risk Detected – Immediate Action Required",
+  message = "Weather risk is High or disease severity is Severe. Take action now to prevent yield and quality loss.",
   className = "",
 }: Props) {
   if (!show) return null;
@@ -20,12 +20,15 @@ export default function AlertBanner({
   return (
     <div
       role="alert"
-      className={`flex items-start gap-3 rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-amber-200 ${className}`}
+      className={`flex items-start gap-3 rounded-xl border border-rose-500/50 bg-rose-500/10 px-4 py-3 text-rose-100 shadow-[0_0_35px_rgba(244,63,94,0.18)] backdrop-blur-xl ${className}`}
     >
-      <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+      <div className="relative mt-0.5 shrink-0">
+        <span className="absolute -inset-1 rounded-full bg-rose-500/25 blur-md animate-pulse" />
+        <AlertTriangle className="relative h-5 w-5 text-rose-300" />
+      </div>
       <div>
-        <p className="font-semibold text-amber-100">{title}</p>
-        <p className="mt-0.5 text-sm text-amber-200/90">{message}</p>
+        <p className="font-semibold text-rose-50">{title}</p>
+        <p className="mt-0.5 text-sm text-rose-100/80">{message}</p>
       </div>
     </div>
   );

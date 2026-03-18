@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { MapPin, Loader2, Save, User, ArrowLeft } from "lucide-react";
-import { getProfile, saveProfile, type Profile, type ProfileLocation } from "@/lib/api";
+import { getProfile, saveProfile, getFarm, type Profile, type ProfileLocation } from "@/lib/api";
 
 const CROP_OPTIONS = ["Wheat", "Rice", "Maize", "Cotton", "Sugarcane", "Pulses", "Mustard", "Vegetables"];
 const SOIL_OPTIONS = ["Loamy", "Clay", "Sandy", "Black Soil", "Red Soil", "Alluvial"];
@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [syncingFarm, setSyncingFarm] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +87,19 @@ export default function ProfilePage() {
       await saveProfile(form);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSyncFromMap = async () => {
+    setSyncingFarm(true);
+    try {
+      const farm = await getFarm().catch(() => ({}));
+      const area = (farm as { area_acres?: number })?.area_acres;
+      if (typeof area === "number" && area > 0) {
+        setForm((p) => ({ ...p, farm_area_acres: area }));
+      }
+    } finally {
+      setSyncingFarm(false);
     }
   };
 
@@ -182,6 +196,20 @@ export default function ProfilePage() {
 
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-300">Farm area (acres)</label>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSyncFromMap}
+                  disabled={syncingFarm}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-gray-300 transition hover:border-[#00FF9C]/40 hover:text-[#00FF9C] disabled:opacity-50"
+                >
+                  {syncingFarm ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                  Use farm-map area
+                </button>
+                <Link href="/farm-map" className="text-sm font-medium text-[#00FF9C] hover:underline">
+                  Open farm map →
+                </Link>
+              </div>
               <input
                 type="number"
                 min={0}
@@ -193,6 +221,9 @@ export default function ProfilePage() {
                 placeholder="e.g. 2.5"
                 className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-gray-500 focus:border-[#00FF9C]/50 focus:outline-none focus:ring-1 focus:ring-[#00FF9C]/50"
               />
+              <p className="mt-2 text-xs text-gray-500">
+                Tip: draw your boundary in Farm Map to auto-calculate area.
+              </p>
             </div>
 
             <div>

@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, Save, Trash2 } from "lucide-react";
 import { area } from "@turf/area";
 import { polygon as turfPolygon } from "@turf/helpers";
-import { getFarm, saveFarm, type FarmPoint } from "@/lib/api";
+import { getFarm, saveFarm, getRiskPrediction, getProfile, type FarmPoint } from "@/lib/api";
 
 import "leaflet/dist/leaflet.css";
 
@@ -41,10 +41,19 @@ function polygonAreaAcres(points: FarmPoint[]): number {
   return m2 / M2_PER_ACRE;
 }
 
+function riskOverlayStyle(level: string | null): { color: string; fillColor: string; fillOpacity: number; weight: number } {
+  const l = (level ?? "").toLowerCase();
+  if (l.includes("high")) return { color: "#fb7185", fillColor: "#fb7185", fillOpacity: 0.22, weight: 3 };
+  if (l.includes("medium")) return { color: "#fbbf24", fillColor: "#fbbf24", fillOpacity: 0.18, weight: 3 };
+  return { color: "#34d399", fillColor: "#34d399", fillOpacity: 0.16, weight: 3 };
+}
+
 export default function FarmMapPage() {
   const [points, setPoints] = useState<FarmPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [riskLevel, setRiskLevel] = useState<string | null>(null);
+  const [riskProbability, setRiskProbability] = useState<number | null>(null);
 
   const areaAcres = polygonAreaAcres(points);
 
@@ -83,6 +92,31 @@ export default function FarmMapPage() {
     }
   };
 
+  const refreshRisk = useCallback(async () => {
+    try {
+      const profile = await getProfile().catch(() => ({}));
+      const loc = (profile as { location?: { latitude?: number; longitude?: number } })?.location;
+      const lat = loc?.latitude;
+      const lon = loc?.longitude;
+      const crop = (profile as { crop_types?: string[] })?.crop_types?.[0] || "Wheat";
+      if (typeof lat !== "number" || typeof lon !== "number") {
+        setRiskLevel(null);
+        setRiskProbability(null);
+        return;
+      }
+      const risk = await getRiskPrediction({ crop_type: crop, latitude: lat, longitude: lon });
+      setRiskLevel(risk?.risk?.risk_level ?? null);
+      setRiskProbability(typeof risk?.risk?.probability === "number" ? risk.risk.probability : null);
+    } catch {
+      setRiskLevel(null);
+      setRiskProbability(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!loading) refreshRisk();
+  }, [loading, refreshRisk]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0F1F] flex items-center justify-center">
@@ -94,6 +128,8 @@ export default function FarmMapPage() {
   const polygonPositions = points.length >= 2
     ? [...points.map((p) => [p.lat, p.lon] as [number, number]), [points[0].lat, points[0].lon]]
     : [];
+
+  const overlayStyle = riskOverlayStyle(riskLevel);
 
   return (
     <div className="min-h-screen bg-[#0A0F1F] text-gray-200">
@@ -130,6 +166,12 @@ export default function FarmMapPage() {
               <span className="text-sm text-gray-400">
                 Area: <strong className="text-white">{areaAcres.toFixed(2)}</strong> acres
               </span>
+              <span className="text-sm text-gray-400">
+                Risk overlay:{" "}
+                <strong className="text-white">
+                  {riskLevel ?? "—"}{riskProbability != null ? ` (${Math.round(riskProbability * 100)}%)` : ""}
+                </strong>
+              </span>
             </div>
             <div className="flex gap-2">
               <button
@@ -161,7 +203,7 @@ export default function FarmMapPage() {
               <MapClickHandler onAddPoint={addPoint} />
               {polygonPositions.length >= 3 && (
                 <Polygon
-                  {...({ positions: polygonPositions, pathOptions: { color: "#00FF9C", fillColor: "#00FF9C", fillOpacity: 0.25, weight: 2 } } as any)}
+                  {...({ positions: polygonPositions, pathOptions: overlayStyle } as any)}
                 />
               )}
             </MapContainer>

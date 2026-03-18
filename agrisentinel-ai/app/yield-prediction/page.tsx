@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,9 +14,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { getProfile, getFarm } from "@/lib/api";
 
 const CROP_OPTIONS = ["Wheat", "Rice", "Maize", "Sugarcane", "Cotton"] as const;
 const SOIL_OPTIONS = ["Loamy", "Clay", "Sandy", "Black Soil"] as const;
+const ACRES_TO_HECTARES = 0.404686;
 
 /** Mock ML: deterministic formula → tons/hectare */
 function mockPredictYield(params: {
@@ -84,20 +86,71 @@ export default function YieldPredictionPage() {
   const [isPredicting, setIsPredicting] = useState(false);
   const [result, setResult] = useState<ReturnType<typeof mockPredictYield> | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [profile, farm] = await Promise.all([getProfile().catch(() => ({})), getFarm().catch(() => ({}))]);
+        if (cancelled) return;
+        const profileCrop = (profile as { crop_types?: string[] })?.crop_types?.[0];
+        const profileSoil = (profile as { soil_type?: string | null })?.soil_type ?? null;
+        const profileAreaAcres = (profile as { farm_area_acres?: number })?.farm_area_acres;
+        const farmAreaAcres = (farm as { area_acres?: number })?.area_acres;
+
+        if (profileCrop && CROP_OPTIONS.includes(profileCrop as (typeof CROP_OPTIONS)[number])) {
+          setCrop(profileCrop);
+        }
+        if (profileSoil && SOIL_OPTIONS.includes(profileSoil as (typeof SOIL_OPTIONS)[number])) {
+          setSoil(profileSoil);
+        }
+
+        const acres =
+          typeof farmAreaAcres === "number" && farmAreaAcres > 0
+            ? farmAreaAcres
+            : typeof profileAreaAcres === "number" && profileAreaAcres > 0
+              ? profileAreaAcres
+              : null;
+        if (acres != null) {
+          setFarmSize(String(Math.max(0.5, Math.round(acres * ACRES_TO_HECTARES * 10) / 10)));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsPredicting(true);
     setResult(null);
     setTimeout(() => {
-      setResult(
-        mockPredictYield({
-          crop,
-          soil,
-          temperature: Number(temperature) || 28,
-          rainfall: Number(rainfall) || 800,
-          farmSize: Number(farmSize) || 10,
-        })
-      );
+      const out = mockPredictYield({
+        crop,
+        soil,
+        temperature: Number(temperature) || 28,
+        rainfall: Number(rainfall) || 800,
+        farmSize: Number(farmSize) || 10,
+      });
+      setResult(out);
+      try {
+        const raw = localStorage.getItem("agrisentinel_context");
+        const existing = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+        localStorage.setItem(
+          "agrisentinel_context",
+          JSON.stringify({
+            ...existing,
+            yield_data: {
+              baseYield: out.yieldPerHectare,
+              adjustedYield: out.yieldPerHectare,
+            },
+          }),
+        );
+      } catch {
+        // ignore
+      }
       setIsPredicting(false);
     }, 2000);
   };
