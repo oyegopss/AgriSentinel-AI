@@ -68,7 +68,7 @@ Farmers can upload or scan leaf images, get disease and severity with explainabl
 ### Run the app
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/agrisentinel-ai.git
+git clone https://github.com/oyegopss/agrisentinel-ai.git
 cd agrisentinel-ai
 
 npm install
