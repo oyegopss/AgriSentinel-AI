@@ -203,6 +203,12 @@ function looksLikeLeaf(labels: string[]): boolean {
     joined.includes("tree") ||
     joined.includes("flower") ||
     joined.includes("grass") ||
+    joined.includes("vegetable") ||
+    joined.includes("cabbage") ||
+    joined.includes("lettuce") ||
+    joined.includes("tomato") ||
+    joined.includes("potato") ||
+    joined.includes("pepper") ||
     joined.includes("vegetation") ||
     joined.includes("herb") ||
     joined.includes("foliage")
@@ -687,9 +693,11 @@ export default function DiseaseDetectionPage() {
         const preds = await mnet.classify(imgOrCanvas as any, 5);
         const topLabels = preds.map((p) => p.className);
         const topConf = preds[0]?.probability ?? 0;
+        const isLeafLike = looksLikeLeaf(topLabels);
         // Reject if MobileNet doesn't see plant/leaf/tree-like content.
         // Also reject if top confidence is extremely low (likely noise / wrong object).
-        if (!looksLikeLeaf(topLabels) || topConf < 0.15) {
+        // Soft gate: only reject when MobileNet is confident it's NON-leaf-like.
+        if (!isLeafLike && topConf >= 0.35) {
           const invalid = DISEASES.find((d) => d.name === "Invalid Image")!;
           const analysisTimeSec = Math.round((performance.now() - startTime) / 100) / 10;
           tf.dispose([imageTensor]);
