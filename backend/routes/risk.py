@@ -1,3 +1,10 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: FastAPI route for weather-based disease risk prediction (`POST /api/risk-predict`)
+- Inputs: crop type + (lat, lon)
+- Output: risk level/probability/reason + weather snapshot
+"""
+
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException

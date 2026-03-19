@@ -1,3 +1,9 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: FastAPI route for farmer profile storage (`/api/profile`)
+- Stores: name, location, farm size, crops, soil type (Firestore single-user doc)
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional

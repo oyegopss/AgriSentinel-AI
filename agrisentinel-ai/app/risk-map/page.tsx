@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Map UI for displaying regional risk overlays
+ */
+
 "use client";
 
 import dynamic from "next/dynamic";

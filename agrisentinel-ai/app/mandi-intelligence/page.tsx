@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Mandi price intelligence UI + recommendations
+ */
+
 "use client";
 
 import { useState } from "react";

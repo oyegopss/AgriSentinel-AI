@@ -1,3 +1,10 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: FastAPI route for the AI advisor endpoint (`POST /api/ai-agent`)
+- Inputs: query + optional disease/risk/yield context
+- Output: structured advice JSON from `services.llm_agent`
+"""
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import Any, Dict, Optional

@@ -1,4 +1,4 @@
-"""LLM-powered AI farmer assistant for AgriSentinel AI.
+"""Hackathon Demo (AgriSentinel AI) - LLM-powered AI farmer assistant for AgriSentinel AI.
 
 This module wraps an LLM (e.g. OpenAI) behind a small, stable
 interface so the rest of the system is not tied to any single

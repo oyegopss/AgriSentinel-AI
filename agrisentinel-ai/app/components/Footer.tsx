@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Site footer
+ */
+
 "use client";
 
 import { Github, ExternalLink, Database, Leaf } from "lucide-react";

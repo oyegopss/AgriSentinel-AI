@@ -1,3 +1,9 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: FastAPI route for saving/loading farmer farm boundary polygon (`/api/farm`)
+- Stores: polygon coordinates + computed `area_acres`
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional

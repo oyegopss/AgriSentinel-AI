@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Yield-impact computation helpers for the advisor pipeline
+ * - Used by: advisor pages / AI decision flow
+ */
+
 "use client";
 
 import type { AdvisorSeverity } from "./advisorInference";

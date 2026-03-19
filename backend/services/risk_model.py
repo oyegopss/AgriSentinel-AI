@@ -1,3 +1,8 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: Rule-based + heuristic risk model (weather-based) for disease probability
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

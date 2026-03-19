@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Landing page + entry CTA for the demo
+ */
+
 "use client";
 
 import Link from "next/link";

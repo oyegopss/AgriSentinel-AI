@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Decorative particle background (visual enhancement)
+ */
+
 "use client";
 
 import { useEffect, useRef } from "react";

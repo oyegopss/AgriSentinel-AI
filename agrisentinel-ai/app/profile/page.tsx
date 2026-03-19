@@ -1,3 +1,10 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Farmer profile UI (name, location, farm size, crops, soil)
+ * - Persists via: `POST /api/profile` and `GET /api/profile`
+ * - Integrates with: AI agent, risk prediction, decision engine
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";

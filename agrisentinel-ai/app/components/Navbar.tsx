@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Top navigation + project linking
+ */
+
 "use client";
 
 import { useState } from "react";

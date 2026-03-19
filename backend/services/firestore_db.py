@@ -1,5 +1,5 @@
 """
-Firestore client for AgriSentinel AI (single-user v1).
+Hackathon Demo (AgriSentinel AI) - Firestore client for AgriSentinel AI (single-user v1).
 Uses GOOGLE_APPLICATION_CREDENTIALS (path to JSON) or FIREBASE_* env vars.
 """
 import os

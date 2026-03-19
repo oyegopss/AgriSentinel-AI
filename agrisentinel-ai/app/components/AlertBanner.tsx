@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: UI alert banner (risk/disease) with pulse animation support
+ */
+
 "use client";
 
 import { AlertTriangle } from "lucide-react";

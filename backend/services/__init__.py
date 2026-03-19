@@ -1,4 +1,4 @@
-"""Service layer for AgriSentinel AI backend.
+"""Hackathon Demo (AgriSentinel AI) - Service layer for backend domain logic.
 
 Place domain logic here (data access, ML inference orchestration,
 pricing/yield calculations, etc.).

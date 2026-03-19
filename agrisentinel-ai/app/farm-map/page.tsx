@@ -1,3 +1,10 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Leaflet farm boundary drawing + polygon area calculation
+ * - Persists via: `POST /api/farm` and `GET /api/farm`
+ * - Bonus: Risk color overlay uses profile + `POST /api/risk-predict`
+ */
+
 "use client";
 
 import dynamic from "next/dynamic";

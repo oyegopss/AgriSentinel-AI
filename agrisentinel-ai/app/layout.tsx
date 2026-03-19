@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Root layout wrapper (fonts, metadata, global styling hooks)
+ */
+
 import type { Metadata } from "next";
 import { Orbitron, Space_Grotesk, Geist_Mono } from "next/font/google";
 import "./globals.css";

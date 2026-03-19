@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Reusable loading spinner component
+ */
+
 "use client";
 
 import { motion } from "framer-motion";

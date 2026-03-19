@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Personalized AI advisor UI (disease + risk + yield + mandi context)
+ */
+
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";

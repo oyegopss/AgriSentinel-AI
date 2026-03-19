@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: LLM inference helpers for generating advisor responses
+ * - Used by: AI advisor chat + decision engine flow
+ */
+
 "use client";
 
 export type AdvisorSeverity = "Healthy" | "Mild" | "Moderate" | "Severe";

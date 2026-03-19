@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Frontend API helper for calling backend endpoints (profile, farm, risk, mandi, AI agent)
+ */
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8002";
 
 async function apiFetch<T>(path: string, options: RequestInit): Promise<T> {

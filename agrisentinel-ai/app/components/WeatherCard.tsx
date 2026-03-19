@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: UI card that displays current weather fields for risk context
+ * - Input: `weather` { temperature, humidity, rainfall }
+ */
+
 "use client";
 
 import { Thermometer, Droplets, CloudRain } from "lucide-react";

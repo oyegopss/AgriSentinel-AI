@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Chat UI for AI advisor with quick actions + localStorage context injection
+ */
+
 "use client";
 
 import { useState } from "react";

@@ -1,3 +1,8 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: Central API router that registers feature routes (risk, agent, profile, farm)
+"""
+
 from fastapi import APIRouter
 
 from . import risk, agent, profile, farm

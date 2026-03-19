@@ -1,3 +1,9 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: OpenWeather integration for weather fields (temp/humidity/rainfall)
+- Output: normalized weather payload for risk prediction
+"""
+
 import os
 from typing import Any, Dict, Optional
 

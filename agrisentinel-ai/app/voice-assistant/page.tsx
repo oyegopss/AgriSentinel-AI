@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Voice assistant UI for asking farm questions
+ * - Uses: Chat/Advisor context via the dashboard + localStorage
+ */
+
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";

@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Yield prediction UI (baseline + adjusted yield demo)
+ * - Also writes `yield_data` into localStorage for downstream dashboard/decision usage
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";

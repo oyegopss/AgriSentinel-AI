@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Explainable rules engine for final “Treat/Sell/Wait” actions
+ * - Used by: dashboard decision section and AI decision flow
+ */
+
 export type DiseaseSignal = {
   /** e.g. "Leaf Spot", "Rust Disease" */
   name: string;

@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Judge-friendly “Final Demo Screen” that stitches profile + map + weather + risk + mandi + decision
+ */
+
 "use client";
 
 import Link from "next/link";

@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Leaf disease detection UI using TFJS (MobileNet gate + disease CNN)
+ * - Features: invalid/non-leaf validation, confidence trust badges, Grad-CAM heatmap
+ */
+
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";

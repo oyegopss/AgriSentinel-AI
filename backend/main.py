@@ -1,3 +1,8 @@
+"""
+Hackathon Demo (AgriSentinel AI)
+- Purpose: FastAPI app entrypoint + CORS + router wiring
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv

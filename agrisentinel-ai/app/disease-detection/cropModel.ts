@@ -1,3 +1,9 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: TensorFlow.js crop/disease model loading + preprocessing helpers
+ * - Used by: `app/disease-detection/page.tsx` during leaf disease inference
+ */
+
 "use client";
 
 /** CNN output class order: Healthy Leaf, Leaf Spot, Rust Disease, Powdery Mildew */

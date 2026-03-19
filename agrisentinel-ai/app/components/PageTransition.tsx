@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Page transition wrapper for smoother navigation
+ */
+
 "use client";
 
 import { usePathname } from "next/navigation";
