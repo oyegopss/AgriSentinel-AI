@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Route transition wrapper for smoother navigation animations.
+ */
+
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 

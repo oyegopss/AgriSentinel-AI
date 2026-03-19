@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Footer with demo links.
+ */
+
 import { Github, ExternalLink, Database, Leaf } from "lucide-react";
 
 const LINKS = [

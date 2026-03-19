@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: TFJS model loading and preprocessing helpers for disease detection.
+ */
+
 /** CNN output class order: Healthy Leaf, Leaf Spot, Rust Disease, Powdery Mildew */
 export const MODEL_CLASS_NAMES = [
   "Healthy Leaf",

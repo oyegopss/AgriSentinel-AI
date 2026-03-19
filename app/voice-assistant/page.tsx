@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Voice assistant demo UI for farm questions.
+ */
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";

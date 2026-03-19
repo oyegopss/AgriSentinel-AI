@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Final demo dashboard screen (crop health + risk + weather + yield + mandi + decision).
+ */
+
 import Link from "next/link";
 import { useMemo } from "react";
 import { motion } from "framer-motion";

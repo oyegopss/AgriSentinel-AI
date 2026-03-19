@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Decorative particle background for premium UI.
+ */
+
 import { useEffect, useRef } from "react";
 
 const PARTICLE_COUNT = 80;

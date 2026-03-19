@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Loading spinner component used across demo screens.
+ */
+
 import { motion } from "framer-motion";
 
 type LoadingSpinnerProps = {

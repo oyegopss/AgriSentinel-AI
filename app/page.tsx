@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Landing page for the demo (entry CTA + overview).
+ */
+
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {

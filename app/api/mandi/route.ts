@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Next.js API route proxy for mandi price intelligence.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 
 const DATA_GOV_BASE =

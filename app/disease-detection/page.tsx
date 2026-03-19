@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: Leaf disease detection UI and inference pipeline (MobileNet gate + CNN).
+ */
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -404,9 +409,9 @@ function LeafScanner({
   }
 
   return (
-    <div className="space-y-4">
+      <div className="space-y-4">
       <p className="text-sm font-medium text-gray-400">Camera feed</p>
-      <div className="relative aspect-[4/3] w-full max-w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
+      <div className="relative aspect-4/3 w-full max-w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
         <video
           ref={videoRef}
           playsInline
