@@ -26,5 +26,6 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "_hackathon_submission_note": "AgriSentinel AI demo repository (timestamp refresh only; no dependency changes)."
 }
