@@ -1,3 +1,4 @@
+// Hackathon Submission Note: TypeScript config for the demo workspace (JSONC supported by TS tooling).
 {
   "compilerOptions": {
     "target": "ES2017",

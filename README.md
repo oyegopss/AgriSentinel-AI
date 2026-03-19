@@ -1,5 +1,7 @@
 # AgriSentinel AI – AI-Powered Crop Intelligence Platform
 
+> Hackathon Submission Note: This repository contains the AgriSentinel AI demo (disease detection, yield prediction, mandi intelligence, and final decision cockpit) built for quick judge walkthroughs.
+
 **AgriSentinel AI** is an AI-powered agriculture assistant that helps farmers **detect crop diseases**, **predict yield**, and **find the best mandi prices** using deep learning and government data APIs—all in the browser.
 
 ## Live Demo

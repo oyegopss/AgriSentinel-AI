@@ -1,5 +1,7 @@
 # Git setup – AgriSentinel AI (Hackathon)
 
+> Hackathon Submission Note: Keep these steps handy for local demo + GitHub publishing.
+
 Quick copy-paste commands to initialize Git and connect to GitHub.
 
 ---

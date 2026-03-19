@@ -1,5 +1,7 @@
 # Publishing AgriSentinel AI to GitHub
 
+> Hackathon Submission Note: This file lists the minimal commands used to publish the demo repository.
+
 ## Repository description (short)
 
 Use this as the **GitHub repo description** (Settings → General → Description):
