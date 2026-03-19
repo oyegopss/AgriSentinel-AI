@@ -1,5 +1,7 @@
 # CNN Crop Disease Classifier
 
+> Hackathon Demo: this folder documents the TensorFlow.js model assets used by the disease detection pipeline.
+
 This folder contains a TensorFlow.js model used by the **Disease Detection** page.
 
 ## Current model: Leaf Doctor (PlantVillage)

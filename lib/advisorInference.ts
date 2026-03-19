@@ -1,3 +1,8 @@
+/**
+ * Hackathon Demo: Advisor inference helpers.
+ * - Transforms model-style outputs into advisor severity + structured recommendation text.
+ */
+
 "use client";
 
 export type AdvisorSeverity = "Healthy" | "Mild" | "Moderate" | "Severe";

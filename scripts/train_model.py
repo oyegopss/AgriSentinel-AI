@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+Hackathon Demo: Train the disease classifier model used by the frontend inference.
+
 Train a MobileNetV2 CNN on PlantVillage (38 classes) for AgriSentinel AI.
 
 Architecture:

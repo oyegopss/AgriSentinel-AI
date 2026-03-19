@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+Hackathon Demo: Reorganize PlantVillage dataset into class folder structure.
+
 Reorganize PlantVillage color/ into 38 class folders.
 Handles: (1) files directly in color/ with name raw_*_CLASSNAME_<uuid>___*.jpg
          (2) subdirs named raw_*_CLASSNAME_* containing *.jpg

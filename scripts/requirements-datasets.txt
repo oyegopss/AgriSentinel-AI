@@ -1,4 +1,5 @@
 # Dependencies for PlantVillage dataset download, training, and TF.js conversion
+# Hackathon Demo: keep versions compatible for reproducible model training.
 # Install: pip install -r scripts/requirements-datasets.txt
 # If you see "DO NOT MATCH THE HASHES" error, run:
 #   pip install --no-cache-dir -r scripts/requirements-datasets.txt

@@ -1,5 +1,7 @@
 # AgriSentinel AI – Pipeline Verification
 
+> Hackathon Demo: Notes for judges to understand how the CNN model was trained and converted into TFJS assets used in `app/disease-detection`.
+
 ## 1. Model training
 
 ```bash

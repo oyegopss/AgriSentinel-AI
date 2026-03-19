@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Hackathon Demo: end-to-end pipeline runner (train → convert → start dev).
 # Full pipeline: install deps → train → convert → dev server
 # Run from project root: ./scripts/run_full_pipeline.sh
 

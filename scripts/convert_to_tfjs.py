@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+Hackathon Demo: Convert the trained CNN model into TensorFlow.js format.
+
 Convert trained Keras H5 model to TensorFlow.js format for browser inference.
 
 Input:  model/plant_disease_model.h5

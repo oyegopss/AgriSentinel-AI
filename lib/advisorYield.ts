@@ -1,3 +1,7 @@
+/**
+ * Hackathon Demo: Yield-impact computation helpers for advisor flow.
+ */
+
 "use client";
 
 import type { AdvisorSeverity } from "./advisorInference";

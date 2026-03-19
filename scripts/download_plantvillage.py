@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+Hackathon Demo: Download the PlantVillage dataset used for model training.
+
 Download the PlantVillage dataset and save it under datasets/plantvillage/.
 
 Dataset: ~54,306 images, 38 classes, 14 crops, RGB (healthy + diseased leaves).
