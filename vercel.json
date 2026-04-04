@@ -1,8 +1,7 @@
 {
   "framework": "nextjs",
-  "installCommand": "cd agrisentinel-ai && npm install",
-  "buildCommand": "cd agrisentinel-ai && npm run build",
-  "devCommand": "cd agrisentinel-ai && npm run dev -- --hostname 127.0.0.1 -p 3001",
-  "outputDirectory": "agrisentinel-ai/.next"
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev -- --hostname 127.0.0.1 -p 3001",
+  "outputDirectory": ".next"
 }
-
