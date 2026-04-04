@@ -1,40 +1,32 @@
 "use client";
 
 /**
- * Hackathon Demo (AgriSentinel AI)
- * - Purpose: Top navigation for the multi-page demo.
+ * Navbar — AgriSentinel AI
+ * Auth-aware: shows Sign In CTA when logged out, user avatar + Sign Out when logged in.
  */
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Leaf } from "lucide-react";
+import { Menu, X, Leaf, LogIn, LogOut, User } from "lucide-react";
+import { useAuth } from "@/lib/AuthProvider";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
   { label: "Disease Detection", href: "/disease-detection" },
   { label: "Yield Prediction", href: "/yield-prediction" },
   { label: "Mandi Intelligence", href: "/mandi-intelligence" },
+  { label: "Analytics", href: "/analytics" },
   { label: "Dashboard", href: "/dashboard" },
 ] as const;
 
-function NavLink({
-  href,
-  label,
-  isActive,
-}: {
-  href: string;
-  label: string;
-  isActive: boolean;
-}) {
+function NavLink({ href, label, isActive }: { href: string; label: string; isActive: boolean }) {
   return (
     <Link
       href={href}
       className={`nav-link relative rounded-lg px-3 py-2 font-display text-sm font-medium transition-all duration-300 md:text-base ${
-        isActive
-          ? "nav-link-active text-[#00FF9C]"
-          : "text-gray-300 hover:text-[#00FF9C]"
+        isActive ? "nav-link-active text-[#00FF9C]" : "text-gray-300 hover:text-[#00FF9C]"
       }`}
     >
       {label}
@@ -44,7 +36,18 @@ function NavLink({
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, profile, signOut, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileOpen(false);
+    router.push("/auth");
+  };
+
+  const displayName = profile?.displayName || user?.displayName || "Farmer";
+  const nameInitial = displayName.charAt(0).toUpperCase();
 
   return (
     <header
@@ -65,7 +68,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop nav with glow hover */}
+        {/* Desktop nav */}
         <div className="hidden md:flex md:items-center md:gap-1">
           {NAV_ITEMS.map((item) => (
             <NavLink
@@ -77,7 +80,46 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Mobile menu button – touch-friendly */}
+        {/* Desktop auth controls */}
+        <div className="hidden md:flex md:items-center md:gap-3">
+          {loading ? (
+            <div className="h-8 w-24 animate-pulse rounded-full bg-white/10" />
+          ) : user ? (
+            // Logged in: avatar chip + sign out
+            <div className="flex items-center gap-3">
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 pl-3 pr-1.5 py-1 hover:bg-white/10 transition-all"
+              >
+                <span className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">
+                  {displayName}
+                </span>
+                <div className="h-7 w-7 rounded-full bg-[#00FF9C] text-[#050505] flex items-center justify-center font-black text-xs">
+                  {nameInitial}
+                </div>
+              </Link>
+              <button
+                onClick={handleSignOut}
+                title="Sign Out"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-red-400 hover:bg-red-400/10 transition-all"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            // Logged out: Sign In CTA
+            <Link
+              href="/auth"
+              className="flex items-center gap-2 rounded-full bg-[#00FF9C] px-5 py-2 font-display text-xs font-bold uppercase tracking-widest text-[#0A0F1F] shadow-[0_0_20px_rgba(0,255,156,0.2)] hover:bg-[#00e08a] hover:shadow-[0_0_30px_rgba(0,255,156,0.35)] transition-all"
+            >
+              <LogIn className="h-4 w-4" />
+              Sign In
+            </Link>
+          )}
+        </div>
+
+        {/* Mobile menu button */}
         <button
           type="button"
           onClick={() => setMobileOpen((o) => !o)}
@@ -113,6 +155,40 @@ export default function Navbar() {
                   {item.label}
                 </Link>
               ))}
+
+              {/* Mobile auth */}
+              <div className="mt-3 border-t border-white/8 pt-3">
+                {user ? (
+                  <div className="space-y-2">
+                    <Link
+                      href="/profile"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:bg-white/5 transition-all"
+                    >
+                      <div className="h-7 w-7 rounded-full bg-[#00FF9C] text-[#050505] flex items-center justify-center font-black text-xs">
+                        {nameInitial}
+                      </div>
+                      <span>{displayName}</span>
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href="/auth"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-[#00FF9C] py-3 font-display text-xs font-bold uppercase tracking-widest text-[#0A0F1F]"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Sign In / Sign Up
+                  </Link>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

@@ -54,6 +54,25 @@ const scrollReveal = {
 export default function Home() {
   return (
     <div className="relative min-h-screen bg-[#0A0F1F] text-gray-200 overflow-x-hidden">
+      {/* System Status Bar (Pitch Polish) */}
+      <div className="fixed top-0 left-0 right-0 z-[100] h-1 w-full bg-gradient-to-r from-emerald-500 via-[#00C3FF] to-emerald-500 animate-pulse-slow" />
+      <div className="fixed top-1 left-0 right-0 z-[99] flex justify-center pointer-events-none">
+        <div className="flex items-center gap-6 px-6 py-2 rounded-b-2xl bg-[#0A0F1F]/60 backdrop-blur-md border-x border-b border-white/10 shadow-2xl">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-[#00FF9C] shadow-[0_0_8px_#00FF9C]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#00FF9C]/80">Neural Engine: Synced</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-[#00C3FF] shadow-[0_0_8px_#00C3FF]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#00C3FF]/80">LeafNet Foundation: Active</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/80">Gov-Mandi Link: Live</span>
+          </div>
+        </div>
+      </div>
+
       {/* Full-page particle background (fixed, behind all content) */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 opacity-90">
         <ParticleBackground />

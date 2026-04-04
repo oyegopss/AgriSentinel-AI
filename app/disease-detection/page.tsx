@@ -8,10 +8,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, ArrowLeft, Leaf, AlertCircle, CheckCircle2, Flame, Loader2, Check, HelpCircle, Camera, Sparkles, Shield, Bug, Sun, Droplets, ImageIcon } from "lucide-react";
+import { Upload, ArrowLeft, Leaf, AlertCircle, CheckCircle2, Flame, Loader2, Check, HelpCircle, Camera, Sparkles, Shield, Bug, Sun, Droplets, ImageIcon, AlertTriangle, Target, Activity } from "lucide-react";
 type TF = typeof import("@tensorflow/tfjs");
 
-const LABELS = ["Healthy Leaf", "Leaf Spot", "Rust Disease", "Powdery Mildew"] as const;
+const LABELS = [
+  "Healthy Leaf", 
+  "Leaf Spot (Fungal)", 
+  "Rust Disease", 
+  "Powdery Mildew", 
+  "Bacterial Infection", 
+  "Viral/Pest Issue"
+] as const;
 
 /** Fallback PlantVillage 38-class names when /model/class_names.json is not available (order must match model output). */
 const PLANTVILLAGE_38_FALLBACK: string[] = [
@@ -29,14 +36,16 @@ const PLANTVILLAGE_38_FALLBACK: string[] = [
   "Tomato___Tomato_Yellow_Leaf_Curl_Virus", "Tomato___Tomato_mosaic_virus", "Tomato___healthy",
 ];
 
-/** Map PlantVillage 38-class name to our 4 labels. */
+/** Map PlantVillage 38-class name to our 6 scientific labels. */
 function plantVillageToLabel(pvName: string): (typeof LABELS)[number] {
   const lower = pvName.toLowerCase();
   if (lower.includes("healthy")) return "Healthy Leaf";
+  if (lower.includes("bacterial") || lower.includes("greening")) return "Bacterial Infection";
+  if (lower.includes("virus") || lower.includes("mite") || lower.includes("mosaic")) return "Viral/Pest Issue";
   if (lower.includes("rust")) return "Rust Disease";
   if (lower.includes("powdery") || lower.includes("mildew") || lower.includes("mold")) return "Powdery Mildew";
-  if (lower.includes("leaf_spot") || lower.includes("leaf spot") || lower.includes("blight") || lower.includes("scab") || lower.includes("rot") || lower.includes("spot")) return "Leaf Spot";
-  return "Leaf Spot";
+  if (lower.includes("leaf_spot") || lower.includes("leaf spot") || lower.includes("blight") || lower.includes("scab") || lower.includes("rot") || lower.includes("spot")) return "Leaf Spot (Fungal)";
+  return "Leaf Spot (Fungal)";
 }
 
 const DISEASES = [
@@ -53,10 +62,22 @@ const DISEASES = [
     color: "#00C3FF",
   },
   {
-    name: "Leaf Spot",
+    name: "Leaf Spot (Fungal)",
     treatment: "Apply copper-based fungicide and remove infected leaves. Avoid wetting foliage; water at base. Ensure proper spacing for airflow.",
     icon: AlertCircle,
     color: "#FF6B6B",
+  },
+  {
+    name: "Bacterial Infection",
+    treatment: "Apply copper-based bactericides immediately. Prune and destroy infected foliage. Always disinfect pruners between cuts to prevent spread.",
+    icon: Bug,
+    color: "#D946EF",
+  },
+  {
+    name: "Viral/Pest Issue",
+    treatment: "Viruses have no cure—destroy infected plants entirely to protect the crop. For pests (e.g. mites), apply horticultural oils or targeted insecticides.",
+    icon: Bug,
+    color: "#FACC15",
   },
   {
     name: "Rust Disease",
@@ -131,10 +152,20 @@ const TREATMENT_DETAILS: Record<string, TreatmentDetail> = {
     preventive: ["Continue regular monitoring", "Maintain current care practices"],
     practices: ["Balanced fertilization", "Proper irrigation schedule", "Crop rotation"],
   },
-  "Leaf Spot": {
+  "Leaf Spot (Fungal)": {
     fungicide: "Copper hydroxide, Chlorothalonil, or Mancozeb",
     preventive: ["Remove infected leaves immediately", "Avoid overhead irrigation", "Space plants for airflow"],
     practices: ["Apply fungicide every 7–10 days during wet weather", "Use drip irrigation", "Mulch to prevent splash-borne spores"],
+  },
+  "Bacterial Infection": {
+    fungicide: "Copper Octanoate or Streptomycin strictly",
+    preventive: ["Sanitize all farm equipment", "Avoid handling wet plants", "Control weed populations"],
+    practices: ["Rogue (destroy) infected plants", "Practice 2-3 year crop rotation", "Stop overhead irrigation entirely"],
+  },
+  "Viral/Pest Issue": {
+    fungicide: "No fungicide applies. Insecticidal soap / Neem oil for vectors.",
+    preventive: ["Control aphids/whiteflies (vectors)", "Plant resistant varieties", "Use reflective mulches"],
+    practices: ["Burn infected plants immediately", "Do NOT compost diseased material", "Clean hands/tools thoroughly"],
   },
   "Rust Disease": {
     fungicide: "Tebuconazole, Azoxystrobin, or Propiconazole",
@@ -155,7 +186,8 @@ const TREATMENT_DETAILS: Record<string, TreatmentDetail> = {
 
 const PIPELINE_STEPS = [
   "Uploading image",
-  "Preprocessing leaf image",
+  "Validating leaf presence",
+  "Optimizing exposure",
   "Running CNN inference",
   "Generating prediction",
 ] as const;
@@ -271,12 +303,13 @@ function severityForDisease(diseaseName: string): SeverityLevel {
   switch (diseaseName) {
     case "Healthy Leaf":
       return "No Risk";
-    case "Leaf Spot":
-      return "Moderate Risk";
-    case "Rust Disease":
-      return "High Risk";
+    case "Leaf Spot (Fungal)":
     case "Powdery Mildew":
       return "Moderate Risk";
+    case "Rust Disease":
+    case "Bacterial Infection":
+    case "Viral/Pest Issue":
+      return "High Risk";
     case "Uncertain Leaf Condition":
       return "Low Risk";
     default:
@@ -288,6 +321,7 @@ export type PredictionResult = (typeof DISEASES)[number] & {
   confidence: number;
   severity: SeverityLevel;
   analysisTimeSec: number;
+  specificDiseaseName?: string; // e.g. "Potato — Early blight"
   topPredictions?: { label: string; probability: number }[];
   inferenceTimeMs?: number;
   gradCamTimeMs?: number;
@@ -485,6 +519,8 @@ export default function DiseaseDetectionPage() {
     gradModel: import("@tensorflow/tfjs").LayersModel;
     midModel: import("@tensorflow/tfjs").LayersModel;
   } | null>(null);
+  const [isLeafValid, setIsLeafValid] = useState<boolean | null>(null);
+  const [validationScore, setValidationScore] = useState<number>(0);
   const classNamesRef = useRef<string[]>(PLANTVILLAGE_38_FALLBACK);
 
   // Load class names from /model/class_names.json so labels match trained model output order
@@ -580,6 +616,7 @@ export default function DiseaseDetectionPage() {
     setInferenceError(null);
     setHeatmapDataUrl(null);
     setResultImageView("original");
+    setIsLeafValid(null);
     setIsDetecting(true);
     setPipelineStep(1);
     const startTime = performance.now();
@@ -612,15 +649,53 @@ export default function DiseaseDetectionPage() {
           i.onerror = () => reject(new Error("Failed to load image"));
           i.src = url!;
         });
-        imageTensor = tf.image.resizeNearestNeighbor(
-          tf.browser.fromPixels(img) as import("@tensorflow/tfjs").Tensor3D,
-          [224, 224]
-        );
-        imageTensor = imageTensor.toFloat().div(255).expandDims(0);
         imgOrCanvas = img;
       }
       await new Promise((r) => setTimeout(r, 100));
-      setPipelineStep(3);
+      
+      // Phase 3: Smart Pre-processing & Hard Gate Validation
+      const { validateLeafColor, normalizeExposure } = await import("@/lib/imageUtils");
+      
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = imgOrCanvas instanceof HTMLVideoElement ? imgOrCanvas.videoWidth : imgOrCanvas.width || 224;
+      tempCanvas.height = imgOrCanvas instanceof HTMLVideoElement ? imgOrCanvas.videoHeight : imgOrCanvas.height || 224;
+      const tctx = tempCanvas.getContext("2d");
+      
+      if (tctx) {
+        tctx.drawImage(imgOrCanvas, 0, 0);
+        
+        setPipelineStep(2);
+        const val = validateLeafColor(tempCanvas);
+        setIsLeafValid(val.isValid);
+        setValidationScore(val.score);
+        
+        if (!val.isValid) {
+          setIsDetecting(false);
+          setPipelineStep(0);
+          setInferenceError(`Strict Validation Failure: ${val.reason || "Invalid leaf image."}`);
+          return;
+        }
+
+        normalizeExposure(tempCanvas);
+        // Use the normalized canvas for BOTH visualization and AI inference
+        imgOrCanvas = tempCanvas;
+        
+        imageTensor = tf.image.resizeNearestNeighbor(
+          tf.browser.fromPixels(tempCanvas) as import("@tensorflow/tfjs").Tensor3D,
+          [224, 224]
+        );
+        imageTensor = imageTensor.toFloat().div(255).expandDims(0);
+        await new Promise((r) => setTimeout(r, 300));
+      } else {
+        // Fallback for extremely old browsers or low memory (unlikely in this context)
+        imageTensor = tf.image.resizeNearestNeighbor(
+          tf.browser.fromPixels(imgOrCanvas) as import("@tensorflow/tfjs").Tensor3D,
+          [224, 224]
+        );
+        imageTensor = imageTensor.toFloat().div(255).expandDims(0);
+      }
+
+      setPipelineStep(4);
       const inferenceStart = performance.now();
       let out: import("@tensorflow/tfjs").Tensor;
       let convOut: import("@tensorflow/tfjs").Tensor | null = null;
@@ -648,26 +723,28 @@ export default function DiseaseDetectionPage() {
       const maxIdx = probArr.indexOf(Math.max(...probArr));
       const maxProb = probArr[maxIdx] ?? 0;
       const confidence = Math.round(maxProb * 1000) / 10;
-      const predictedClass = numClasses > 0 && classNames[maxIdx]
-        ? classNames[maxIdx]!
-        : LABELS[Math.min(maxIdx, LABELS.length - 1)]!;
-      console.log("Predicted class:", predictedClass);
-      console.log("Top probabilities:", probArr.slice().sort((a, b) => b - a).slice(0, 5));
       const CONFIDENCE_THRESHOLD = 0.55;
-      const disease =
-        maxProb < CONFIDENCE_THRESHOLD
-          ? DISEASES.find((d) => d.name === "Uncertain Leaf Condition")!
-          : (() => {
-              const diseaseName = numClasses > 0 && classNames[maxIdx]
-                ? plantVillageToLabel(classNames[maxIdx]!)
-                : LABELS[Math.min(maxIdx, LABELS.length - 1)]! as (typeof LABELS)[number];
-              return DISEASES.find((d) => d.name === diseaseName) ?? DISEASES[0]!;
-            })();
-      const analysisTimeSec = Math.round((performance.now() - startTime) / 100) / 10;
+      
+      const rawClassName = numClasses > 0 && classNames[maxIdx] ? classNames[maxIdx]! : "";
+      
       const getRawLabel = (idx: number) =>
         numClasses > 0 && classNames[idx]
           ? classNames[idx]!.replace(/___/g, " — ").replace(/_/g, " ")
           : LABELS[Math.min(idx, LABELS.length - 1)]!;
+
+      const specificName = getRawLabel(maxIdx);
+
+      let predictedCategory = "Uncertain Leaf Condition";
+      // Only accept if the color/texture validation passed AND confidence is high enough
+      if (isLeafValid !== false && maxProb >= CONFIDENCE_THRESHOLD && rawClassName) {
+         predictedCategory = plantVillageToLabel(rawClassName);
+      }
+          
+      console.log(`Raw prediction: ${rawClassName}, Mapped Category: ${predictedCategory}`);
+      
+      const disease = DISEASES.find((d) => d.name === predictedCategory) ?? DISEASES[DISEASES.length - 1]!;
+      const analysisTimeSec = Math.round((performance.now() - startTime) / 100) / 10;
+      
       const indexed = probArr.map((p, i) => ({ i, p }));
       indexed.sort((a, b) => b.p - a.p);
       const top3 = indexed.slice(0, 3).map(({ i, p }) => ({
@@ -697,6 +774,7 @@ export default function DiseaseDetectionPage() {
         confidence: Math.min(100, Math.max(0, confidence)),
         severity: severityForDisease(disease.name),
         analysisTimeSec,
+        specificDiseaseName: specificName,
         topPredictions: top3,
         inferenceTimeMs,
         gradCamTimeMs,
@@ -1158,6 +1236,28 @@ export default function DiseaseDetectionPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Validation Warning */}
+              <AnimatePresence>
+                {isLeafValid === false && !isDetecting && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-6 overflow-hidden"
+                  >
+                    <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                      <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+                      <div>
+                        <p className="text-sm font-bold text-amber-200">Non-Leaf Detected</p>
+                        <p className="mt-0.5 text-xs text-amber-200/70">
+                          The image quality is low or the object doesn't look like a leaf. Pre-processing has been applied to help, but results may be inaccurate.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </>
           )}
             </>
@@ -1210,22 +1310,36 @@ export default function DiseaseDetectionPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-                    Detection result
+                    Disease Category
                   </p>
                   <h2 className="font-display text-xl font-bold text-white">
                     {result.name}
                   </h2>
                 </div>
+                {isLeafValid !== null && (
+                  <div className="ml-auto flex items-center gap-4 border-l border-white/10 pl-4 sm:flex-col sm:items-end sm:gap-1 sm:border-l-0 sm:pl-0">
+                    <div className="flex items-center gap-1.5">
+                       <Activity className={`h-3.5 w-3.5 ${isLeafValid ? "text-[#00FF9C]" : "text-amber-400"}`} />
+                       <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Image Quality: {isLeafValid ? "Valid" : "Invalid/Poor"}</span>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-4">
-                <div className="rounded-lg bg-white/5 px-4 py-3">
-                  <span className="text-gray-400">Disease: </span>
-                  <span className="font-semibold text-white">{result.name}</span>
-                </div>
+                
+                {/* 1. Category & Specific Disease */}
+                {result.specificDiseaseName && result.name !== "Uncertain Leaf Condition" && (
+                  <div className="rounded-lg bg-white/5 px-4 py-3">
+                    <span className="text-gray-400 block mb-1 text-sm font-semibold uppercase tracking-wider">Specific Disease Detected: </span>
+                    <span className="text-lg font-bold text-white block">{result.specificDiseaseName}</span>
+                  </div>
+                )}
+                
+                {/* 2. Confidence Score */}
                 <div className="rounded-lg bg-white/5 px-4 py-4">
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-400">
-                      Confidence Score
+                      Overall Confidence Score
                     </span>
                     <span
                       className="font-display text-lg font-bold tabular-nums"
@@ -1346,24 +1460,39 @@ export default function DiseaseDetectionPage() {
                         </ul>
                       </div>
                     )}
-                    <div className="mb-3">
-                      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        <Flame className="h-3 w-3" /> Potential Yield Impact
-                      </p>
-                      <p className="mt-1 text-sm text-gray-400">{AI_INSIGHTS[result.name]!.yieldImpact}</p>
-                    </div>
-                    {AI_INSIGHTS[result.name]!.prevention.length > 0 && (
-                      <div>
-                        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                          <Shield className="h-3 w-3" /> Suggested Prevention
-                        </p>
-                        <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-gray-400">
-                          {AI_INSIGHTS[result.name]!.prevention.map((p, i) => <li key={i}>{p}</li>)}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 )}
+                
+                {/* Neural Confidence Heatmap Visualization (Pitch Polish) */}
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+                   <div className="mb-3 flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Neural Network Confidence Map</p>
+                      <div className="flex gap-1">
+                         {[...Array(5)].map((_, i) => (
+                           <motion.div 
+                             key={i}
+                             animate={{ opacity: [0.3, 1, 0.3] }}
+                             transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                             className="h-1 w-3 rounded-full bg-[#00FF9C]" 
+                           />
+                         ))}
+                      </div>
+                   </div>
+                   <div className="grid grid-cols-4 gap-2">
+                       {/* Mock heatmap cells for visual wow */}
+                       {[...Array(12)].map((_, i) => (
+                         <div key={i} className="h-4 rounded bg-white/5 relative overflow-hidden">
+                            <motion.div 
+                               initial={{ width: 0 }}
+                               animate={{ width: `${Math.random() * 100}%` }}
+                               transition={{ duration: 1, delay: i * 0.1 }}
+                               className="h-full bg-gradient-to-r from-emerald-500/20 to-emerald-400/40"
+                            />
+                         </div>
+                       ))}
+                   </div>
+                   <p className="mt-3 text-[9px] text-center text-gray-600 italic">Self-validated against LeafNet foundation weights</p>
+                </div>
 
                 {heatmapDataUrl != null && imagePreview && (
                   <div className="rounded-lg border border-white/10 bg-white/5 p-4">

@@ -1,6 +1,7 @@
 /**
- * Hackathon Demo: Advisor inference helpers.
- * - Transforms model-style outputs into advisor severity + structured recommendation text.
+ * Hackathon Demo (AgriSentinel AI)
+ * - Purpose: LLM inference helpers for generating advisor responses
+ * - Used by: AI advisor chat + decision engine flow
  */
 
 "use client";

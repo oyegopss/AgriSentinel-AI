@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0A0F1F;
+  --background: #050505;
   --foreground: #e5e7eb;
   --primary: #00FF9C;
   --secondary: #00C3FF;
@@ -26,6 +26,7 @@
   --color-accent: var(--accent);
   --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-orbitron: var(--font-orbitron);
 }
 
 * {
@@ -208,4 +209,18 @@ body {
     min-height: 44px;
     min-width: 44px;
   }
+}
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 40s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
 }

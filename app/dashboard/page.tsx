@@ -1,352 +1,486 @@
 "use client";
 
-/**
- * Hackathon Demo (AgriSentinel AI)
- * - Purpose: Final demo dashboard screen (crop health + risk + weather + yield + mandi + decision).
- */
-
-import Link from "next/link";
-import { useMemo } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Leaf,
   BarChart3,
   Store,
   TrendingUp,
   AlertCircle,
-  Award,
+  Wind,
+  Droplets,
+  Thermometer,
+  User as UserIcon,
+  MapPin,
+  Calendar,
   Sparkles,
   Bot,
+  ArrowUpRight,
+  Shield,
+  Activity,
+  ChevronRight,
+  CloudRain,
+  Zap,
+  Settings,
+  Brain,
+  Globe,
+  PieChart,
+  Edit2,
+  Check,
+  RefreshCw,
+  LogOut,
+  X,
 } from "lucide-react";
+import Link from "next/link";
+import { useAuth } from "@/lib/AuthProvider";
+import { fetchWeather, WeatherData } from "@/lib/weatherApi";
+import { AlertsSystem } from "@/app/components/AlertsSystem";
+import { MandiIntelligence } from "@/app/components/MandiIntelligence";
+import { DecisionEngine } from "@/app/components/DecisionEngine";
+import { AlertBanner, GlobalAlert } from "@/app/components/AlertBanner";
+import { VoiceInput } from "@/app/components/VoiceInput";
+import { FarmMap } from "@/app/components/FarmMap";
+import { DiseaseDetector } from "@/app/components/DiseaseDetector";
+import { useRouter } from "next/navigation";
+import { DecisionType } from "@/app/components/DecisionEngine";
+import { EconomicImpact } from "@/app/components/EconomicImpact";
 
-const AI_INSIGHTS = [
-  "Based on crop health analysis and mandi prices, selling wheat at Lucknow mandi within the next 7 days may increase profit by ₹150 per quintal.",
-  "Early signs of Leaf Spot disease detected. Applying copper fungicide within the next 3 days may prevent yield loss.",
-  "Current rainfall and soil conditions suggest a higher-than-average yield for maize this season.",
-];
+// ── Location Edit Modal ──────────────────────────────────────────────────────
 
-const OVERVIEW_CARDS = [
-  { label: "Crop Health", value: "Leaf Spot Detected", icon: Leaf, color: "#00FF9C" },
-  { label: "Predicted Yield", value: "4.8 tons per hectare", icon: BarChart3, color: "#00C3FF" },
-  { label: "Best Market Price", value: "₹2250 / quintal", icon: Store, color: "#1BFF00" },
-  { label: "Profit Opportunity", value: "+₹150 per quintal", icon: TrendingUp, color: "#00FF9C" },
-];
-
-const MANDI_ROWS = [
-  { crop: "Wheat", market: "Lucknow Mandi", price: "₹2250", distance: "45 km", isBest: true },
-  { crop: "Wheat", market: "Kanpur Mandi", price: "₹2100", distance: "10 km", isBest: false },
-  { crop: "Wheat", market: "Etawah Mandi", price: "₹2050", distance: "30 km", isBest: false },
-];
-
-export default function DashboardPage() {
-  const yourYield = 4.8;
-  const regionalAvg = 4.1;
-  const maxYield = Math.max(yourYield, regionalAvg);
-  const aiInsight = useMemo(
-    () => AI_INSIGHTS[Math.floor(Math.random() * AI_INSIGHTS.length)],
-    []
-  );
+function LocationEditModal({
+  currentLocation,
+  locationLoading,
+  locationError,
+  onClose,
+  onSaveManual,
+  onDetect,
+}: {
+  currentLocation: string;
+  locationLoading: boolean;
+  locationError: string | null;
+  onClose: () => void;
+  onSaveManual: (val: string) => void;
+  onDetect: () => void;
+}) {
+  const [value, setValue] = useState(currentLocation);
 
   return (
-    <div className="min-h-screen bg-[#0A0F1F] text-gray-200">
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-10 text-center"
-        >
-          <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">
-            Farmer <span className="text-gradient">Intelligence Dashboard</span>
-          </h1>
-          <p className="mt-2 text-gray-400">
-            AI-powered insights for smarter farming decisions.
-          </p>
-        </motion.div>
-
-        {/* SECTION 1 — Overview Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        >
-          {OVERVIEW_CARDS.map((card, i) => (
-            <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 * i }}
-              whileHover={{ y: -4, scale: 1.02 }}
-              className="glass-card neon-border rounded-2xl border p-6 transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,156,0.2)]"
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${card.color}20` }}
-                >
-                  <card.icon className="h-6 w-6" style={{ color: card.color }} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-                    {card.label}
-                  </p>
-                  <p className="mt-1 font-display text-lg font-bold text-white">
-                    {card.value}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* AI Farming Insight — recommendation panel */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="mb-10"
-        >
-          <div className="glass-card rounded-2xl border border-[#00FF9C]/30 p-6 shadow-[0_0_40px_rgba(0,255,156,0.08)] transition-all duration-300 hover:shadow-[0_0_50px_rgba(0,255,156,0.12)] hover:border-[#00FF9C]/50">
-            <div className="flex items-start gap-4">
-              <motion.div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#00FF9C]/20"
-                animate={{
-                  boxShadow: [
-                    "0 0 20px rgba(0, 255, 156, 0.25)",
-                    "0 0 35px rgba(0, 255, 156, 0.4)",
-                    "0 0 20px rgba(0, 255, 156, 0.25)",
-                  ],
-                }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <Bot className="h-6 w-6 text-[#00FF9C]" />
-              </motion.div>
-              <div className="min-w-0 flex-1">
-                <h2 className="mb-2 font-display flex items-center gap-2 text-lg font-semibold text-white">
-                  <Sparkles className="h-5 w-5 text-[#00FF9C]" />
-                  AI Farming Insight
-                </h2>
-                <p className="text-gray-300 leading-relaxed">
-                  {aiInsight}
-                </p>
-                <p className="mt-3 text-xs text-gray-500">
-                  Generated from crop health, mandi data & weather
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* SECTION 2 — Crop Health Status */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card neon-border rounded-2xl p-6"
-          >
-            <h2 className="mb-4 font-display flex items-center gap-2 text-lg font-semibold text-white">
-              <Leaf className="h-5 w-5 text-[#00FF9C]" />
-              Crop Health Status
-            </h2>
-            <p className="mb-2 text-sm text-gray-400">Last analyzed crop image result</p>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FF6B6B]/20">
-                  <AlertCircle className="h-5 w-5 text-[#FF6B6B]" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Disease Detected</p>
-                  <p className="font-display font-semibold text-white">Leaf Spot</p>
-                </div>
-              </div>
-              <div className="mb-4 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-                <span className="text-sm text-gray-400">Confidence</span>
-                <span className="font-display font-bold text-[#00FF9C]">92%</span>
-              </div>
-              <div>
-                <p className="mb-2 text-sm font-medium text-gray-400">
-                  Suggested Treatment
-                </p>
-                <p className="text-sm leading-relaxed text-gray-300">
-                  Apply copper fungicide and remove infected leaves.
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/disease-detection"
-              className="mt-4 inline-block text-sm font-medium text-[#00FF9C] hover:underline"
-            >
-              Run new detection →
-            </Link>
-          </motion.div>
-
-          {/* SECTION 3 — Yield Prediction Chart */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="glass-card neon-border rounded-2xl p-6"
-          >
-            <h2 className="mb-4 font-display flex items-center gap-2 text-lg font-semibold text-white">
-              <BarChart3 className="h-5 w-5 text-[#00C3FF]" />
-              Yield Prediction Chart
-            </h2>
-            <p className="mb-6 text-sm text-gray-400">
-              Predicted yield compared to regional average
-            </p>
-            <div className="flex items-end justify-around gap-6 border-b border-white/10 pb-2">
-              <div className="flex flex-1 flex-col items-center gap-3">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{
-                    height: `${(yourYield / maxYield) * 100}%`,
-                  }}
-                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                  className="w-full max-w-[100px] min-h-[24px] rounded-t-lg bg-linear-to-t from-[#00FF9C] to-[#00C3FF]"
-                  style={{ maxHeight: "180px" }}
-                />
-                <div className="text-center">
-                  <p className="text-2xl font-display font-bold text-[#00FF9C]">
-                    {yourYield}
-                  </p>
-                  <p className="text-xs text-gray-400">Your farm (tons/hectare)</p>
-                </div>
-              </div>
-              <div className="flex flex-1 flex-col items-center gap-3">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{
-                    height: `${(regionalAvg / maxYield) * 100}%`,
-                  }}
-                  transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-                  className="w-full max-w-[100px] min-h-[24px] rounded-t-lg bg-white/20"
-                  style={{ maxHeight: "180px" }}
-                />
-                <div className="text-center">
-                  <p className="text-2xl font-display font-bold text-gray-300">
-                    {regionalAvg}
-                  </p>
-                  <p className="text-xs text-gray-400">Regional average (tons/hectare)</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0A0F1F] p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display text-sm font-bold uppercase tracking-widest text-white">
+            Update Location
+          </h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* SECTION 4 — Mandi Price Insights */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-10 glass-card neon-border overflow-hidden rounded-2xl"
-        >
-          <div className="border-b border-white/10 bg-white/5 px-6 py-4">
-            <h2 className="font-display flex items-center gap-2 text-lg font-semibold text-white">
-              <Store className="h-5 w-5 text-[#00FF9C]" />
-              Mandi Price Insights
-            </h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10 text-left text-sm text-gray-400">
-                  <th className="px-6 py-4 font-display font-semibold">Crop</th>
-                  <th className="px-6 py-4 font-display font-semibold">Market</th>
-                  <th className="px-6 py-4 font-display font-semibold">Price</th>
-                  <th className="px-6 py-4 font-display font-semibold">Distance</th>
-                  <th className="px-6 py-4 font-display font-semibold">Recommendation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MANDI_ROWS.map((row) => (
-                  <tr
-                    key={row.market}
-                    className={`border-b border-white/5 last:border-0 ${
-                      row.isBest ? "bg-[#00FF9C]/10" : "hover:bg-white/5"
-                    }`}
-                  >
-                    <td className="px-6 py-4 font-medium text-white">{row.crop}</td>
-                    <td className="px-6 py-4 text-gray-300">{row.market}</td>
-                    <td
-                      className={`px-6 py-4 font-display font-semibold ${
-                        row.isBest ? "text-[#00FF9C]" : "text-gray-300"
-                      }`}
-                    >
-                      {row.price}
-                    </td>
-                    <td className="px-6 py-4 text-gray-400">{row.distance}</td>
-                    <td className="px-6 py-4">
-                      {row.isBest ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#00FF9C]/20 px-3 py-1 text-xs font-semibold text-[#00FF9C]">
-                          <Award className="h-3.5 w-3.5" />
-                          Best Market
-                        </span>
-                      ) : (
-                        <span className="text-gray-500">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Link
-            href="/mandi-intelligence"
-            className="block border-t border-white/10 px-6 py-3 text-center text-sm font-medium text-[#00FF9C] hover:bg-white/5"
+        <div className="space-y-4">
+          {/* Auto-detect */}
+          <button
+            type="button"
+            onClick={onDetect}
+            disabled={locationLoading}
+            className="flex w-full items-center gap-3 rounded-xl border border-[#00FF9C]/20 bg-[#00FF9C]/5 px-4 py-3 text-sm font-semibold text-[#00FF9C] transition-all hover:bg-[#00FF9C]/10 disabled:opacity-50"
           >
-            View full mandi analysis →
-          </Link>
-        </motion.div>
+            {locationLoading ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <MapPin className="h-4 w-4" />
+            )}
+            {locationLoading ? "Detecting location..." : "Auto-detect my location"}
+          </button>
 
-        {/* SECTION 5 — AI Farming Insights */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="mt-10 rounded-2xl border-2 border-[#00FF9C]/50 bg-[#00FF9C]/5 p-6 shadow-[0_0_30px_rgba(0,255,156,0.15)]"
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#00FF9C]/20">
-              <Sparkles className="h-5 w-5 text-[#00FF9C]" />
-            </div>
-            <h2 className="font-display text-lg font-semibold text-white">
-              AI Farming Insights
-            </h2>
+          {locationError && (
+            <p className="text-xs text-red-400 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {locationError} — use manual input below.
+            </p>
+          )}
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/8" />
+            <span className="text-[10px] text-gray-600 uppercase tracking-widest">or enter manually</span>
+            <div className="flex-1 h-px bg-white/8" />
           </div>
-          <p className="text-gray-200 leading-relaxed">
-            Based on crop health and market prices, harvesting within the next 10
-            days and selling at Lucknow mandi may maximize profit.
+
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="e.g. Kanpur, Uttar Pradesh"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-[#00FF9C]/40 focus:outline-none focus:ring-1 focus:ring-[#00FF9C]/20"
+          />
+
+          <button
+            type="button"
+            onClick={() => value.trim() && onSaveManual(value.trim())}
+            disabled={!value.trim()}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00FF9C] py-3 text-sm font-bold uppercase tracking-widest text-[#0A0F1F] transition-all hover:bg-[#00e08a] disabled:opacity-40"
+          >
+            <Check className="h-4 w-4" />
+            Save Location
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── Main Dashboard Page ──────────────────────────────────────────────────────
+
+export default function DashboardPage() {
+  const { user, profile, loading: authLoading, syncWeather, signOut, locationLoading, locationError, refreshLocation, setManualLocation } = useAuth();
+  const [weather, setWeather] = useState<WeatherData | null>(profile?.lastWeather || null);
+  const [loading, setLoading] = useState(true);
+  const [globalAlerts, setGlobalAlerts] = useState<GlobalAlert[]>([]);
+  const [voiceResult, setVoiceResult] = useState<string | null>(null);
+  const [showLocationEdit, setShowLocationEdit] = useState(false);
+  
+  // Unified flow state
+  const [diseaseResult, setDiseaseResult] = useState<any>(null);
+  const [decisionPayload, setDecisionPayload] = useState<any>({
+    decision: null,
+    reasoning: null,
+    confidence: undefined,
+    loading: false
+  });
+
+  const router = useRouter();
+
+  useEffect(() => {
+    async function loadData() {
+      const city = profile?.location || "Lucknow";
+      const weatherData = await fetchWeather(city);
+      setWeather(weatherData);
+      syncWeather(weatherData);
+
+      const alerts: GlobalAlert[] = [];
+      if (weatherData.riskLevel === "Red") {
+        alerts.push({ id: "1", type: "critical", message: "CRITICAL: Severe weather alert! Immediate field protection required." });
+      } else if (weatherData.humidity > 70) {
+        alerts.push({ id: "2", type: "warning", message: "CAUTION: Rapid humidity spike. High fungal risk today." });
+      }
+      setGlobalAlerts(alerts);
+      setLoading(false);
+    }
+
+    if (!authLoading) {
+      loadData();
+    }
+  }, [authLoading, profile?.location]);
+
+  const handleVoiceTranscript = async (text: string) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${baseUrl}/api/ai-agent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: text,
+          disease: diseaseResult?.disease,
+          risk: { level: weather?.riskLevel, prob: weather?.suitabilityScore },
+          yield_data: { current: 85 } // Placeholder for actual yield data
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const reply = data.advice || data.recommendation || "I am analyzing your farm. Please wait.";
+        
+        // Dispatch custom event for VoiceInput to pick up
+        window.dispatchEvent(new CustomEvent("agrisentinel-ai-reply", {
+          detail: { text: reply }
+        }));
+      } else {
+        throw new Error("Agent failed");
+      }
+    } catch (e) {
+      console.error("Voice AI Error:", e);
+      window.dispatchEvent(new CustomEvent("agrisentinel-ai-reply", {
+        detail: { text: "I'm sorry, I encountered an error connecting to the farm intelligence center." }
+      }));
+    }
+  };
+
+  const getUnifiedDecision = async (overrideDisease?: any) => {
+    setDecisionPayload((prev: any) => ({ ...prev, loading: true }));
+    try {
+      const currentDisease = overrideDisease || diseaseResult || { disease: "Healthy", severity: "None" };
+      const currentMandiPrices = [
+        { market: "Local Mandi", price: 2100, distance_km: 15 },
+        { market: "Central Hub", price: 2250, distance_km: 45 }
+      ];
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${baseUrl}/api/decisions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          crop_health: currentDisease.disease,
+          disease_severity: currentDisease.severity,
+          weather_condition: weather?.description || "Clear",
+          humidity: weather?.humidity || 50,
+          mandi_prices: currentMandiPrices,
+          transport_rate_per_km: 20
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Determine type based on rec string for demo visualization
+        let type: DecisionType = "WAIT";
+        if (data.recommendation.toLowerCase().includes("treat")) type = "TREAT";
+        else if (data.recommendation.toLowerCase().includes("harvest") || data.recommendation.toLowerCase().includes("sell")) type = "SELL";
+        else if (data.recommendation.toLowerCase().includes("postpone") || data.recommendation.toLowerCase().includes("drainage")) type = "CRITICAL";
+
+        setDecisionPayload({
+          decision: type,
+          reasoning: data.recommendation,
+          confidence: data.confidence,
+          loading: false
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      setDecisionPayload((prev: any) => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (weather && !decisionPayload.loading && !decisionPayload.decision) {
+      getUnifiedDecision();
+    }
+  }, [weather]);
+
+  const handleDiseaseResult = (res: any) => {
+    setDiseaseResult(res);
+    getUnifiedDecision(res);
+  };
+
+  const dismissAlert = (id: string) => {
+    setGlobalAlerts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/auth");
+  };
+
+  const handleDetectLocation = async () => {
+    await refreshLocation();
+    setShowLocationEdit(false);
+  };
+
+  const handleManualLocation = async (val: string) => {
+    await setManualLocation(val);
+    setShowLocationEdit(false);
+  };
+
+  if (authLoading || (loading && !weather)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050505]">
+        <div className="text-center">
+          <Bot className="mx-auto h-12 w-12 animate-bounce text-[#00FF9C]" />
+          <p className="mt-4 font-display text-sm text-gray-400 ai-loading-text">
+            Synchronizing Farmer Intelligence Center...
           </p>
-        </motion.div>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Quick links */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.45 }}
-          className="mt-10 flex flex-wrap justify-center gap-4"
-        >
-          <Link
-            href="/disease-detection"
-            className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-gray-400 transition-colors hover:border-[#00FF9C]/40 hover:text-[#00FF9C]"
+  const healthScore = weather?.suitabilityScore || 88;
+  const riskLevel = weather?.riskLevel || "Green";
+  const displayName = profile?.displayName || "Farmer";
+  const nameInitial = displayName.charAt(0).toUpperCase();
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-gray-200 pb-20">
+      <AlertBanner alerts={globalAlerts} onDismiss={dismissAlert} />
+
+      {/* Dashboard Top Removed - Inherited from Root Layout Navbar */}
+
+      {/* Location banner */}
+      <div className="border-b border-white/5 bg-[#050505]/80 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-3.5 w-3.5 text-[#00FF9C]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              {locationLoading
+                ? "Detecting location..."
+                : `Detected Location: ${profile?.location || "India"}`}
+            </span>
+            {!locationLoading && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#00FF9C]/10 text-[#00FF9C] font-bold uppercase tracking-widest">
+                {profile?.locationData?.source === "gps"
+                  ? "GPS"
+                  : profile?.locationData?.source === "manual"
+                  ? "Manual"
+                  : "Auto"}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowLocationEdit(true)}
+            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-gray-600 hover:text-[#00FF9C] transition-colors"
           >
-            Disease Detection
-          </Link>
-          <Link
-            href="/yield-prediction"
-            className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-gray-400 transition-colors hover:border-[#00FF9C]/40 hover:text-[#00FF9C]"
-          >
-            Yield Prediction
-          </Link>
-          <Link
-            href="/mandi-intelligence"
-            className="rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-gray-400 transition-colors hover:border-[#00FF9C]/40 hover:text-[#00FF9C]"
-          >
-            Mandi Intelligence
-          </Link>
-        </motion.div>
+            <Edit2 className="h-3 w-3" />
+            Edit
+          </button>
+        </div>
+      </div>
+
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
+        
+        {/* Executive ROI Summary */}
+        <div className="space-y-4">
+           <div className="flex items-center justify-between px-2">
+              <div className="flex items-center gap-3">
+                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00FF9C]/10 text-[#00FF9C]">
+                   <Sparkles className="h-4 w-4" />
+                 </div>
+                 <h2 className="font-display text-xs font-black uppercase tracking-[0.2em] text-white">Actionable Executive Summary</h2>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-[8px] font-bold text-gray-500 uppercase tracking-widest">
+                 <div className="h-1.5 w-1.5 rounded-full bg-[#00FF9C] animate-pulse" />
+                 AI Command Center Active
+              </div>
+           </div>
+           <EconomicImpact 
+             diseaseResult={diseaseResult} 
+             weather={weather} 
+             farmArea={profile?.farmArea || 2.5} 
+           />
+        </div>
+        
+        {/* Step 1: Environment */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 md:mb-10">
+          <div className="lg:col-span-8">
+            <div className="glass-card overflow-hidden rounded-[2.5rem] border border-white/5 bg-white/[0.01]">
+              <div className="flex border-b border-white/5 bg-white/5 px-8 py-5 items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00C3FF]/10">
+                  <Globe className="h-4 w-4 text-[#00C3FF]" />
+                </div>
+                <h3 className="font-display text-[10px] font-bold text-white uppercase tracking-widest">
+                  Intelligence Module 01: Environmental Surveillance
+                </h3>
+              </div>
+              <div className="p-4">
+                <FarmMap />
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-4">
+            <div className="glass-card rounded-[2.5rem] p-8 border border-white/5 bg-white/[0.01] h-full">
+              <h3 className="font-display font-medium text-white mb-8 flex items-center gap-2 tracking-widest text-xs uppercase">
+                <Thermometer className="h-4 w-4 text-[#00FF9C]" />
+                Atmospheric Status
+              </h3>
+              <div className="flex items-end justify-between mb-8">
+                <p className="text-5xl font-display font-black text-white tracking-tighter">{weather?.temp}°C</p>
+                <div className="text-right">
+                  <p className="text-xs text-emerald-400 font-bold uppercase tracking-[0.2em]">{weather?.riskLevel} Risk</p>
+                  <p className="text-[10px] text-gray-600 font-bold mt-1 uppercase tracking-widest">{weather?.city}</p>
+                </div>
+              </div>
+              <div className="space-y-4 pt-6 border-t border-white/5">
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  <span>Humidity</span>
+                  <span className="text-white">{weather?.humidity}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#00C3FF]" style={{ width: `${weather?.humidity}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Step 2: Disease Upload */}
+        <DiseaseDetector onResult={handleDiseaseResult} />
+
+        {/* Step 3: Mandi Markets */}
+        <div className="mt-8">
+           <div className="flex items-center gap-3 mb-6 px-2">
+             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00FF9C]/10">
+               <Store className="h-4 w-4 text-[#00FF9C]" />
+             </div>
+             <h3 className="font-display text-[10px] font-bold text-white uppercase tracking-widest">
+               Intelligence Module 03: Market Analytics
+             </h3>
+           </div>
+           <MandiIntelligence />
+        </div>
+
+        {/* Floating Price Ticker Simulation */}
+        <div className="fixed bottom-0 left-0 right-0 z-[100] border-t border-white/5 bg-[#050505]/90 backdrop-blur-xl py-2 px-6">
+           <div className="flex items-center gap-10 overflow-hidden whitespace-nowrap">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase text-[9px] tracking-widest shrink-0">
+                 <Activity className="h-3 w-3" />
+                 Live Market Feed:
+              </div>
+              <div className="flex items-center gap-8 animate-marquee">
+                 {[
+                   { crop: "Wheat", price: "₹2,245", trend: "+1.2%" },
+                   { crop: "Rice (Basmati)", price: "₹2,840", trend: "+0.8%" },
+                   { crop: "Potato", price: "₹1,450", trend: "-2.1%" },
+                   { crop: "Tomato", price: "₹1,820", trend: "+12.4%" },
+                   { crop: "Onion", price: "₹2,100", trend: "-1.5%" },
+                   { crop: "Chilli", price: "₹3,400", trend: "+4.2%" },
+                 ].map((t, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                       <span className="text-gray-400 uppercase font-black tracking-tighter text-[10px]">{t.crop}</span>
+                       <span className="text-white font-mono text-[10px]">{t.price}</span>
+                       <span className={t.trend.startsWith('+') ? "text-emerald-500 text-[8px]" : "text-red-500 text-[8px]"}>{t.trend}</span>
+                    </div>
+                 ))}
+              </div>
+           </div>
+        </div>
+
+        {/* The Hero: Final Decision */}
+        <div className="pt-10">
+          <DecisionEngine
+            decision={decisionPayload.decision}
+            reasoning={decisionPayload.reasoning}
+            confidence={decisionPayload.confidence}
+            loading={decisionPayload.loading}
+          />
+        </div>
+
       </main>
+
+      <VoiceInput onTranscript={handleVoiceTranscript} />
+      <AlertsSystem />
+
+      {/* Location edit modal */}
+      <AnimatePresence>
+        {showLocationEdit && (
+          <LocationEditModal
+            currentLocation={profile?.location || ""}
+            locationLoading={locationLoading}
+            locationError={locationError}
+            onClose={() => setShowLocationEdit(false)}
+            onSaveManual={handleManualLocation}
+            onDetect={handleDetectLocation}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

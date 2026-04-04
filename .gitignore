@@ -84,6 +84,15 @@ datasets/
 *.h5
 /model/
 
+# Agent State & Local Config
+.agent/
+.agents/
+.gemini/
+.gsd/
+.backups/
+.cortex/
+get-shit-done-for-antigravity/
+
 # ─── Tracked for deployment: public/model/ ──────────────────────
 # DO NOT ignore: public/model/model.json, public/model/group*.bin, public/model/class_names.json
 # (They are served by the app for client-side inference.)
