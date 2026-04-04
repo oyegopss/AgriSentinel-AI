@@ -22,17 +22,28 @@ Farmers can upload or scan leaf images, get disease and severity with explainabl
 
 ---
 
-## Features
+## ✨ Key Features & Modules
 
 | Feature | Description |
 |--------|-------------|
-| **AI Crop Disease Detection** | MobileNetV2 CNN trained on PlantVillage; 38 disease classes; client-side TensorFlow.js inference |
-| **Grad-CAM Explainable AI** | Heatmap overlay showing which leaf regions the model used for the prediction |
-| **Real-time camera leaf scanning** | Capture leaf from device camera and run the same CNN + heatmap pipeline |
-| **Crop Yield Prediction** | Input crop, soil, temperature, rainfall, farm area → predicted yield (tons/hectare) with factor breakdown |
-| **Smart Mandi Price Intelligence** | Fetches live mandi prices from data.gov.in; best price recommendation and comparison table |
-| **AI Farmer Advisor** | End-to-end flow: upload/scan leaf → disease → yield adjustment → mandi prices → AI recommendation |
-| **Farmer recommendations** | Disease-specific treatment and market advice in the UI |
+| **AI Crop Disease Detection** | MobileNetV2 CNN trained on PlantVillage (38 classes); client-side TensorFlow.js inference for zero-latency diagnosis. |
+| **Grad-CAM Explainable AI** | Real-time heatmap overlay showing exactly which regions of the leaf the AI analyzed to reach its conclusion. |
+| **Real-time Camera Scanning** | Seamless mobile-web integration to scan leaves directly from the field via device camera. |
+| **Crop Yield Prediction** | Advanced forecasting based on crop type, soil quality, temperature, and farm area (tons/hectare). |
+| **Smart Mandi Intelligence** | Live price tracking from [data.gov.in](https://data.gov.in); automated "Best Market" recommendations based on price and distance. |
+| **AI Farmer Advisor** | A unified decision cockpit that synthesizes health, weather, and market data into actionable advice (Treat/Sell/Harvest). |
+| **Economic ROI Module** | Visualizes the financial impact and value-at-risk for each farming decision in real-time. |
+| **Hindi Voice Assistant** | Accessibility-first design with natural-sounding Hindi voice synthesis for non-tech-savvy users. |
+
+---
+
+## 🚀 Recent Achievements (Hackathon Prep)
+
+- **Executive AI Command Center**: Transformed the dashboard into a high-visibility, glassmorphic UI for rapid decision-making.
+- **End-to-End Decision Pipeline**: Connected the CNN diagnosis results directly to market intelligence and yield impact for a one-click farmer workflow.
+- **Location-Aware Weather Alerts**: Integrated GPS and weather APIs for hyper-local disease risk alerts (e.g., fungal risk during high humidity).
+- **Robust Auth & Profiles**: Implemented Firebase-backed secure user login and persistent farm data tracking.
+- **Automated Verification**: Configured TestSprite for continuous quality assurance of the full intelligence pipeline.
 
 ---
 
