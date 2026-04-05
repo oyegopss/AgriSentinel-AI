@@ -163,7 +163,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       crops: ["Wheat", "Rice"],
       createdAt: new Date().toISOString(),
     };
-    await upsertUserDoc(cred.user.uid, newProfile);
+    try {
+      await upsertUserDoc(cred.user.uid, newProfile);
+    } catch {
+      console.warn("Firestore save failed, degrading gracefully.");
+    }
     setProfile(newProfile);
     // Fire geolocation after account creation (non-blocking)
     detectAndSaveLocation(cred.user.uid);
@@ -178,19 +182,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // ── Google Sign-In ────────────────────────────────────────────────────────
   const signInWithGoogle = async () => {
     const cred = await signInWithPopup(auth, googleProvider);
-    const existing = await fetchUserDoc(cred.user.uid);
-    if (!existing) {
-      const newProfile: UserProfile = {
+    try {
+      const existing = await fetchUserDoc(cred.user.uid);
+      if (!existing) {
+        const newProfile: UserProfile = {
+          uid: cred.user.uid,
+          displayName: cred.user.displayName ?? "Farmer",
+          email: cred.user.email ?? "",
+          location: "India",
+          farmArea: 2.5,
+          crops: ["Wheat", "Rice"],
+          createdAt: new Date().toISOString(),
+        };
+        await upsertUserDoc(cred.user.uid, newProfile);
+        setProfile(newProfile);
+        detectAndSaveLocation(cred.user.uid);
+      }
+    } catch {
+      // If Firestore fails, just provide a fallback profile so login still works
+      console.warn("Firestore fetch/save failed, providing fallback profile.");
+      setProfile({
         uid: cred.user.uid,
         displayName: cred.user.displayName ?? "Farmer",
         email: cred.user.email ?? "",
         location: "India",
         farmArea: 2.5,
-        crops: ["Wheat", "Rice"],
+        crops: [],
         createdAt: new Date().toISOString(),
-      };
-      await upsertUserDoc(cred.user.uid, newProfile);
-      setProfile(newProfile);
+      });
       detectAndSaveLocation(cred.user.uid);
     }
     // If existing, onAuthStateChanged will load the profile

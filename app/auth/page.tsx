@@ -105,8 +105,10 @@ export default function AuthPage() {
 
   // Redirect already-logged-in users
   useEffect(() => {
-    if (user) router.replace("/dashboard");
-  }, [user, router]);
+    if (user) {
+      window.location.href = "/dashboard";
+    }
+  }, [user]);
 
   const clearForm = () => {
     setError("");
@@ -155,9 +157,13 @@ export default function AuthPage() {
       } else {
         await signIn(email, password);
       }
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (err: any) {
-      setError(friendlyError(err.code ?? ""));
+      if (user) {
+        window.location.href = "/dashboard";
+      } else {
+        setError(friendlyError(err.code ?? ""));
+      }
     } finally {
       setLoading(false);
     }
@@ -168,9 +174,13 @@ export default function AuthPage() {
     setError("");
     try {
       await signInWithGoogle();
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (err: any) {
-      setError(friendlyError(err.code ?? ""));
+      if (user) {
+        window.location.href = "/dashboard";
+      } else {
+        setError(friendlyError(err.code ?? ""));
+      }
     } finally {
       setGoogleLoading(false);
     }
