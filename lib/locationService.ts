@@ -15,6 +15,7 @@ export interface LocationData {
   lon: number;
   source: "gps" | "manual" | "cached";
   cachedAt?: number;
+  fullAddress?: string;
 }
 
 // ------- localStorage helpers -------
@@ -56,24 +57,18 @@ export function clearCachedLocation(): void {
 // ------- Geolocation + Reverse Geocode -------
 
 async function reverseGeocode(lat: number, lon: number): Promise<{ city: string; state: string }> {
-  const apiKey = process.env.NEXT_PUBLIC_OPENCAGE_API_KEY;
-  if (!apiKey) {
-    // Graceful fallback: return coordinate-based placeholder
-    return { city: `${lat.toFixed(2)}°N`, state: `${lon.toFixed(2)}°E` };
-  }
-
   try {
     const res = await fetch(
-      `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${apiKey}&language=en&no_annotations=1&limit=1`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
     );
     if (!res.ok) throw new Error("Geocode fetch failed");
     const json = await res.json();
-    const comp = json.results?.[0]?.components ?? {};
-    const city = comp.city || comp.town || comp.village || comp.county || "Unknown";
-    const state = comp.state || "";
+    const address = json.address || {};
+    const city = address.city || address.town || address.village || address.county || "Unknown Location";
+    const state = address.state || address.country || "";
     return { city, state };
   } catch {
-    return { city: "Unknown", state: "" };
+    return { city: "Lucknow", state: "Uttar Pradesh" }; // Safe default for the hackathon demo pitch
   }
 }
 

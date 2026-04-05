@@ -113,3 +113,92 @@ export function normalizeExposure(canvas: HTMLCanvasElement): void {
 
   ctx.putImageData(imageData, 0, 0);
 }
+
+/**
+ * High-fidelity "Explainable AI" Heatmap Simulation (Pseudo Grad-CAM)
+ * For the hackathon pitch: Highlights non-green (yellow/brown) areas which correlate
+ * with lesions, rust, or blight spots.
+ */
+export function generateExplainabilityHeatmap(canvas: HTMLCanvasElement): string | null {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  
+  // Create a new canvas for the heatmap overlay
+  const hmCanvas = document.createElement("canvas");
+  hmCanvas.width = w;
+  hmCanvas.height = h;
+  const hmCtx = hmCanvas.getContext("2d");
+  if (!hmCtx) return null;
+
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+  
+  // Base overlay
+  const heatmapData = hmCtx.createImageData(w, h);
+  const hmData = heatmapData.data;
+
+  // We'll create a semi-transparent heatmap. 
+  // Green/Healthy areas = transparent (or very light blue tint)
+  // Yellow/Brown/Spots = intense red/orange/yellow
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i]!;
+    const g = data[i + 1]!;
+    const b = data[i + 2]!;
+    
+    // Using existing rgbToHsl logic here inline for speed or just simple heuristics
+    const { h: hue, s: sat, l: lum } = (() => {
+       let rr=r/255, gg=g/255, bb=b/255;
+       let max=Math.max(rr,gg,bb), min=Math.min(rr,gg,bb);
+       let hh=0, ss=0, ll=(max+min)/2;
+       if (max !== min) {
+           let d = max - min;
+           ss = ll > 0.5 ? d / (2 - max - min) : d / (max + min);
+           if (max===rr) hh = (gg-bb)/d + (gg<bb?6:0);
+           else if (max===gg) hh = (bb-rr)/d + 2;
+           else hh = (rr-gg)/d + 4;
+           hh /= 6;
+       }
+       return { h: hh*360, s: ss, l: ll };
+    })();
+
+    // Initialize as fully transparent
+    hmData[i] = 0;   // R
+    hmData[i+1] = 0; // G
+    hmData[i+2] = 0; // B
+    hmData[i+3] = 0; // Alpha
+    
+    // Ignore pure black/white background
+    if (lum < 0.1 || lum > 0.95) continue;
+
+    // Detect spots: non-green, high contrast areas.
+    // Rust/Blight usually falls in Hue 10-50 (browns, yellows, orange)
+    if (hue >= 10 && hue <= 55 && sat > 0.2) {
+      // Calculate intensity based on distance from pure green and saturation
+      const intensity = Math.min(1.0, sat * 1.5);
+      
+      // Map to Jet colormap-ish (red/orange)
+      hmData[i] = 255; // R
+      hmData[i+1] = Math.floor(100 * (1-intensity)); // G
+      hmData[i+2] = 0; // B
+      hmData[i+3] = Math.floor(180 * intensity); // Alpha
+    } 
+  }
+  
+  hmCtx.putImageData(heatmapData, 0, 0);
+  
+  // Apply a blur to make it look like a smooth activation map (Grad-CAM)
+  const finalCanvas = document.createElement("canvas");
+  finalCanvas.width = w;
+  finalCanvas.height = h;
+  const fCtx = finalCanvas.getContext("2d");
+  if (fCtx) {
+     fCtx.filter = 'blur(8px)';
+     fCtx.drawImage(hmCanvas, 0, 0);
+     return finalCanvas.toDataURL("image/png");
+  }
+
+  return hmCanvas.toDataURL("image/png");
+}

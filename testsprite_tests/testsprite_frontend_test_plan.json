@@ -1,0 +1,1071 @@
+[
+  {
+    "id": "TC001",
+    "title": "Login and reach dashboard with all core cards visible",
+    "description": "Verifies a user can log in from the landing flow and reach the dashboard where all core advisor cards are rendered.",
+    "category": "Image Upload & Disease Detection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the option to log in"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the username field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the dashboard to finish loading"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user lands on the dashboard and the image upload, decision, profit, alerts, and mandi sections are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Offline reload shows cached app shell",
+    "description": "Verifies that after an initial online load, reloading the app while offline still loads the cached UI shell instead of a browser network error.",
+    "category": "PWA Offline Capability",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the page to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Set the browser to offline mode"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the app UI loads from cache while offline"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Register service worker on first visit",
+    "description": "Verifies that visiting the landing page registers the service worker so the app can use offline caching thereafter.",
+    "category": "PWA Offline Capability",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the page to finish loading"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the app indicates the offline capability is enabled (e.g., service worker registered/ready indicator)"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Detect disease from a valid leaf image and show diagnosis and severity",
+    "description": "Verifies a farmer can upload a valid leaf image for analysis and receives a disease diagnosis and severity result on the dashboard.",
+    "category": "Image Upload & Disease Detection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the dashboard to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid image file in the leaf image picker"
+      },
+      {
+        "type": "action",
+        "description": "Submit the selected image for analysis"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the detection result to appear"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a disease diagnosis name and a severity value are displayed in the detection result"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Market Recommendation card shows ranked mandi options with net profit estimates",
+    "description": "Verifies that a logged-in user can view a ranked list of mandi recommendations with transport-adjusted net profit estimates.",
+    "category": "Market Recommendation (Best Mandi)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Market Recommendation section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a ranked list of mandi recommendations with net profit estimates is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Choose Sell via FPO and see confirmation for selected mandi",
+    "description": "Verifies that the user can choose the direct-sell option via FPO and sees a confirmation tied to the selected mandi.",
+    "category": "Market Recommendation (Best Mandi)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Market Recommendation section"
+      },
+      {
+        "type": "action",
+        "description": "Choose the option to sell via FPO for a mandi recommendation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a direct-sell confirmation is displayed for the selected mandi"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Decision card shows score, risk, and recommendation text",
+    "description": "Verifies the decision engine section displays a decision score, a risk level, and a recommendation that a farmer can read.",
+    "category": "Decision Engine",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the dashboard to finish loading"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the decision section displays a decision score, a risk level, and a recommendation text"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Offline navigation to a previously visited public route works",
+    "description": "Verifies that after the app shell is cached, navigating back to the landing route while offline still renders the landing UI.",
+    "category": "PWA Offline Capability",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the page to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the page to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Set the browser to offline mode"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the landing page UI renders while offline"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "View Analytics dashboard KPIs and charts",
+    "description": "Verifies that a logged-in user can open Analytics and see the KPI grid along with yield, profit, and disease charts.",
+    "category": "Analytics Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the analytics page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a KPI grid is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify yield, profit, and disease charts are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC010",
+    "title": "View Smart Alerts on dashboard",
+    "description": "Verifies that a logged-in user can view Smart Alerts on the dashboard and that alert items are displayed.",
+    "category": "Smart Alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Smart Alerts section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Smart Alerts are displayed as a list of alert items"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC011",
+    "title": "Offline access to previously visited authenticated route gracefully blocks",
+    "description": "Verifies that after visiting the dashboard once online, reopening it while offline results in a deterministic blocked/redirected state rather than a broken page.",
+    "category": "PWA Offline Capability",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the navigation control to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the page to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Set the browser to offline mode"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is blocked from the authenticated page via a redirect to login or a clear access-blocked offline state"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC012",
+    "title": "Market Recommendation renders without blocking other dashboard cards",
+    "description": "Verifies that the Market Recommendation card renders while the rest of the dashboard remains visible and usable.",
+    "category": "Market Recommendation (Best Mandi)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard shows multiple core cards including Market Recommendation"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC013",
+    "title": "Profit simulation shows treated vs untreated and net comparison",
+    "description": "Verifies the profit simulation section displays treated and untreated profit values along with a net comparison for decision-making.",
+    "category": "Profit Simulation",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the dashboard to finish loading"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the profit simulation section displays treated profit, untreated profit, and a net profit comparison"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC014",
+    "title": "FPO selection persists within the current dashboard session",
+    "description": "Verifies that after selecting Sell via FPO, the dashboard continues to show the selected state during the current session without resetting.",
+    "category": "Market Recommendation (Best Mandi)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Market Recommendation section"
+      },
+      {
+        "type": "action",
+        "description": "Choose the option to sell via FPO for a mandi recommendation"
+      },
+      {
+        "type": "action",
+        "description": "Scroll away to another dashboard section and then return to the Market Recommendation section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the UI still shows the direct-sell selection state for the chosen mandi"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC015",
+    "title": "Navigate from dashboard to analytics and view metrics",
+    "description": "Verifies that a logged-in user can move from the dashboard into analytics and successfully view analytics metrics and charts.",
+    "category": "Analytics Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the analytics page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a KPI grid is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify yield, profit, and disease charts are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC016",
+    "title": "Read aloud plays recommendation using speech synthesis when available",
+    "description": "Verifies requesting read-aloud triggers spoken playback for the displayed recommendation when speech synthesis is available.",
+    "category": "Decision Engine",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the dashboard to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Request read aloud for the recommendation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a read-aloud playing state or active speech indicator is shown for the recommendation"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC017",
+    "title": "App remains usable after returning online from offline state",
+    "description": "Verifies that switching from offline back to online recovers the app to a normal interactive state without requiring a full reset.",
+    "category": "PWA Offline Capability",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the page to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Set the browser to offline mode"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "action",
+        "description": "Set the browser to online mode"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the app UI loads normally when back online"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC018",
+    "title": "Smart Alerts render without blocking the rest of the dashboard",
+    "description": "Verifies that the Smart Alerts section renders without preventing other dashboard cards from being visible and usable.",
+    "category": "Smart Alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard shows multiple core cards including Smart Alerts"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC019",
+    "title": "Smart Alerts remain visible after other dashboard interactions",
+    "description": "Verifies that Smart Alerts remain available and readable after the user interacts with other dashboard cards.",
+    "category": "Smart Alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Market Recommendation section"
+      },
+      {
+        "type": "action",
+        "description": "Scroll back to the Smart Alerts section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Smart Alerts are displayed as a list of alert items"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC020",
+    "title": "Market Recommendation empty state is shown when no mandi results are available",
+    "description": "Verifies that the Market Recommendation card shows an empty state when it has no recommendations to display.",
+    "category": "Market Recommendation (Best Mandi)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Market Recommendation section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state for mandi recommendations is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC021",
+    "title": "Offline navigation to not-yet-cached route is handled",
+    "description": "Verifies that attempting to open a route that has not been visited/cached while offline results in a predictable offline fallback rather than a blank or broken screen.",
+    "category": "PWA Offline Capability",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the page to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Set the browser to offline mode"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an offline fallback or blocked state is shown instead of a broken page"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC022",
+    "title": "Analytics charts remain visible when navigating within the page",
+    "description": "Verifies that the Analytics page supports scrolling through KPIs and charts without charts disappearing or breaking.",
+    "category": "Analytics Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the analytics page"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the yield chart section"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the profit chart section"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the disease chart section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify yield, profit, and disease charts are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC023",
+    "title": "Reject unsupported file type for detection upload",
+    "description": "Verifies the app prevents submitting a non-image or unsupported file for analysis and shows a validation error state.",
+    "category": "Image Upload & Disease Detection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the dashboard to finish loading"
+      },
+      {
+        "type": "action",
+        "description": "Select a non-image or unsupported file type in the file picker"
+      },
+      {
+        "type": "action",
+        "description": "Submit the selected file for analysis"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an unsupported file type validation error is visible and no detection result is shown"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC024",
+    "title": "Smart Alerts empty state is shown when no alerts are available",
+    "description": "Verifies that the dashboard shows a clear empty state for Smart Alerts when there are no alert items to display.",
+    "category": "Smart Alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Smart Alerts section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state for Smart Alerts is displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC025",
+    "title": "Analytics KPI grid is readable and contains multiple metrics",
+    "description": "Verifies that the KPI grid shows multiple KPI values so the user can review current farm performance at a glance.",
+    "category": "Analytics Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the analytics page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the KPI grid displays multiple KPI metrics with values"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC026",
+    "title": "Smart Alerts content is readable and not truncated to unusable state",
+    "description": "Verifies that each Smart Alert item renders readable content so the user can understand what action is needed.",
+    "category": "Smart Alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Smart Alerts section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify each displayed alert item contains readable message content"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC027",
+    "title": "Market Recommendation list supports scrolling through multiple results",
+    "description": "Verifies that the user can access more than the first recommendation when the ranked mandi list contains multiple entries.",
+    "category": "Market Recommendation (Best Mandi)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Market Recommendation section"
+      },
+      {
+        "type": "action",
+        "description": "Scroll within the recommendation list to view additional mandi entries if present"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify multiple mandi recommendation entries are accessible in the list"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC028",
+    "title": "Analytics page shows a clear empty state when there is no data",
+    "description": "Verifies that if analytics data is not available in the UI, the page presents an empty state rather than a broken layout.",
+    "category": "Analytics Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the analytics page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty state is displayed for missing analytics data"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC029",
+    "title": "Smart Alerts are shown in the dashboard primary language presentation",
+    "description": "Verifies that Smart Alerts appear consistently formatted for the app’s primary presentation language so farmers can interpret them.",
+    "category": "Smart Alerts",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Click the link to open the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the Smart Alerts section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Smart Alerts text is displayed consistently and is readable"
+      }
+    ],
+    "priority": "Low"
+  }
+]

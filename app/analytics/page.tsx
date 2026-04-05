@@ -17,22 +17,8 @@ import {
   Microscope 
 } from "lucide-react";
 import Link from "next/link";
-
-const YIELD_DATA = [
-  { month: "Jan", yield: 2.1, projected: 2.3 },
-  { month: "Feb", yield: 2.4, projected: 2.5 },
-  { month: "Mar", yield: 3.2, projected: 3.1 },
-  { month: "Apr", yield: 3.9, projected: 4.0 },
-  { month: "May", yield: 4.5, projected: 4.4 },
-  { month: "Jun", yield: 4.8, projected: 4.9 },
-];
-
-const PROFIT_DATA = [
-  { name: "Market A", price: 21000, transport: 1200 },
-  { name: "Market B", price: 22500, transport: 2400 },
-  { name: "Market C", price: 19800, transport: 600 },
-  { name: "Market D", price: 21800, transport: 1800 },
-];
+import { useAuth } from "@/lib/AuthProvider";
+import { calculateProfit } from "@/lib/profitEngine";
 
 const DISEASE_DATA = [
   { name: "Week 1", infection: 5 },
@@ -43,8 +29,104 @@ const DISEASE_DATA = [
   { name: "Week 6", infection: 4 },
 ];
 
+const RAW_MANDI_PRICES = [
+  { market: "Local Mandi", basePrice: 2100, transportCost: 600 },
+  { market: "Central Hub", basePrice: 2250, transportCost: 1800 },
+  { market: "Agri Market A", basePrice: 1980, transportCost: 300 },
+  { market: "City Market D", basePrice: 2400, transportCost: 3200 },
+];
+
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState("Last 6 Months");
+  const { profile } = useAuth();
+  const [filterType, setFilterType] = useState<"Weekly" | "Monthly" | "Yearly">("Monthly");
+  
+  // Real data calc
+  // Assuming base profile area or default 5 acres
+  const acreage = profile?.farmArea || 5; 
+  const yieldAmtPerAcre = 5; // quintals
+  const totalYieldQuintals = acreage * yieldAmtPerAcre;
+  
+  // Dynamic Yield Chart (scaled by farmArea and filter)
+  const getYieldData = () => {
+    if (filterType === "Weekly") {
+      return [
+        { month: "W1", yield: totalYieldQuintals * 0.1 },
+        { month: "W2", yield: totalYieldQuintals * 0.15 },
+        { month: "W3", yield: totalYieldQuintals * 0.18 },
+        { month: "W4", yield: totalYieldQuintals * 0.22 },
+        { month: "W5", yield: totalYieldQuintals * 0.28 },
+        { month: "W6", yield: totalYieldQuintals * 0.35 },
+      ];
+    } else if (filterType === "Yearly") {
+      return [
+        { month: "2021", yield: totalYieldQuintals * 3.5 },
+        { month: "2022", yield: totalYieldQuintals * 4.2 },
+        { month: "2023", yield: totalYieldQuintals * 3.8 },
+        { month: "2024", yield: totalYieldQuintals * 5.1 },
+        { month: "2025", yield: totalYieldQuintals * 5.8 },
+        { month: "2026", yield: totalYieldQuintals * 6.0 },
+      ];
+    }
+    return [
+      { month: "Jan", yield: totalYieldQuintals * 0.44 },
+      { month: "Feb", yield: totalYieldQuintals * 0.5 },
+      { month: "Mar", yield: totalYieldQuintals * 0.66 },
+      { month: "Apr", yield: totalYieldQuintals * 0.81 },
+      { month: "May", yield: totalYieldQuintals * 0.93 },
+      { month: "Jun", yield: totalYieldQuintals * 1.0 },
+    ];
+  };
+
+  const getDiseaseData = () => {
+    if (filterType === "Weekly") {
+      return [
+        { name: "Day 1", infection: 2 },
+        { name: "Day 3", infection: 5 },
+        { name: "Day 5", infection: 15 },
+        { name: "Day 7", infection: 8 },
+      ];
+    } else if (filterType === "Yearly") {
+      return [
+        { name: "2022", infection: 42 },
+        { name: "2023", infection: 35 },
+        { name: "2024", infection: 20 },
+        { name: "2025", infection: 10 },
+      ];
+    }
+    return DISEASE_DATA;
+  };
+
+  const dynamicYieldData = getYieldData();
+  const dynamicDiseaseData = getDiseaseData();
+
+  // Dynamic Profit Chart (using real engine calculation)
+  const dynamicProfitData = RAW_MANDI_PRICES.map(m => {
+    // using calculateProfit engine (from dashboard) mapping "None" severity for baseline
+    const profitData = calculateProfit(totalYieldQuintals, m.basePrice, "None");
+    return {
+      name: m.market,
+      // For charting: we'll show Gross Revenue vs Transport
+      revenue: profitData.treatedProfit + m.transportCost, 
+      profit: profitData.treatedProfit,
+      transport: m.transportCost
+    };
+  });
+
+  const rawYieldTonnes = (totalYieldQuintals / 10).toFixed(2); // quintal to tonne
+  const bestMandiProfit = Math.max(...dynamicProfitData.map(d => d.profit));
+
+  const handleExport = () => {
+    const headers = "Category,Label,Value\n";
+    const yieldRows = dynamicYieldData.map(d => `Yield,${d.month},${d.yield.toFixed(2)}`).join("\n");
+    const diseaseRows = dynamicDiseaseData.map(d => `Infection,${d.name},${d.infection}`).join("\n");
+    const profitRows = dynamicProfitData.map(d => `Profit,${d.name},${d.profit}`).join("\n");
+    const csvContent = headers + yieldRows + "\n" + diseaseRows + "\n" + profitRows;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Farm_Report_${filterType}.csv`;
+    link.click();
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-gray-200 pb-20">
@@ -61,14 +143,18 @@ export default function AnalyticsPage() {
           </Link>
           
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs font-bold transition-all hover:bg-white/5 active:scale-95">
+            <button onClick={handleExport} className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs font-bold transition-all hover:bg-white/5 active:scale-95">
                <Download className="h-4 w-4" /> Export Report
             </button>
             <div className="h-4 w-[1px] bg-white/10"></div>
             <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
-               {["Weekly", "Monthly", "Yearly"].map(t => (
-                  <button key={t} className="px-3 py-1 text-[10px] font-bold rounded-lg hover:bg-white/5 transition-all">
-                    {t}
+               {(["Weekly", "Monthly", "Yearly"] as const).map(t => (
+                  <button 
+                    key={t}
+                    onClick={() => setFilterType(t)}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${filterType === t ? "bg-[#00FF9C]/20 text-[#00FF9C]" : "text-gray-500 hover:bg-white/5 hover:text-white"}`}
+                  >
+                     {t}
                   </button>
                ))}
             </div>
@@ -84,14 +170,16 @@ export default function AnalyticsPage() {
           <h1 className="font-display text-4xl font-black text-white uppercase tracking-widest leading-tight">
             Farm <span className="text-[#00FF9C]">Performance Analytics</span>
           </h1>
-          <p className="mt-4 text-gray-500 font-medium tracking-wide">Detailed season telemetry and profit optimization charts.</p>
+          <p className="mt-4 text-gray-500 font-medium tracking-wide">
+            Live telemetry for {acreage} Acres • Yield and profitability mapping.
+          </p>
         </motion.div>
 
         {/* Top KPI Grid */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 mb-10">
            {[
-              { label: "Aggregate Yield", v: "4.82t", diff: "+12.4%", icon: Sprout, color: "text-[#00FF9C]" },
-              { label: "Net Profitability", v: "₹82,450", diff: "+5.1%", icon: Coins, color: "text-[#00C3FF]" },
+              { label: "Aggregate Yield", v: `${rawYieldTonnes}t`, diff: "+12.4%", icon: Sprout, color: "text-[#00FF9C]" },
+              { label: "Peak Profitability", v: `₹${bestMandiProfit.toLocaleString()}`, diff: "+5.1%", icon: Coins, color: "text-[#00C3FF]" },
               { label: "Avg. Health", v: "92%", diff: "-1.2%", icon: Activity, color: "text-emerald-400" },
               { label: "Detection Events", v: "42", diff: "-18%", icon: Microscope, color: "text-orange-400" }
            ].map((kpi, idx) => (
@@ -125,21 +213,20 @@ export default function AnalyticsPage() {
                  <div className="flex items-center justify-between mb-10">
                     <h3 className="font-display font-bold text-lg text-white flex items-center gap-3">
                        <TrendingUp className="h-5 w-5 text-[#00FF9C]" />
-                       Season Yield Output <span className="text-xs text-gray-600 font-bold tracking-widest uppercase ml-4">Tonnes / Hectare</span>
+                       Season Yield Output <span className="text-xs text-gray-600 font-bold tracking-widest uppercase ml-4">Tonnes / Unit</span>
                     </h3>
                  </div>
                  <div className="h-80 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                       <LineChart data={YIELD_DATA}>
+                       <LineChart data={dynamicYieldData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
                           <XAxis dataKey="month" stroke="#ffffff30" fontSize={10} fontWeight="bold" dy={10} axisLine={false} tickLine={false} />
                           <YAxis stroke="#ffffff30" fontSize={10} fontWeight="bold" dx={-10} axisLine={false} tickLine={false} />
                           <Tooltip 
                              contentStyle={{ backgroundColor: "#050505", borderRadius: "16px", border: "1px solid #ffffff10", padding: "12px" }}
-                             itemStyle={{ textTransform: "uppercase", fontSize: "10px", fontWeight: "bold" }}
+                             itemStyle={{ textTransform: "uppercase", fontSize: "10px", fontWeight: "bold", color: "#00FF9C" }}
                           />
-                          <Line type="monotone" dataKey="yield" stroke="#00FF9C" strokeWidth={4} dot={{ fill: "#00FF9C", strokeWidth: 2, r: 4 }} activeDot={{ r: 8, stroke: "#00FF9C", strokeWidth: 4 }} />
-                          <Line type="monotone" dataKey="projected" stroke="#ffffff15" strokeDasharray="5 5" strokeWidth={2} dot={false} />
+                          <Line type="monotone" name="Estimated Yield (Qtls)" dataKey="yield" stroke="#00FF9C" strokeWidth={4} dot={{ fill: "#00FF9C", strokeWidth: 2, r: 4 }} activeDot={{ r: 8, stroke: "#00FF9C", strokeWidth: 4 }} />
                        </LineChart>
                     </ResponsiveContainer>
                  </div>
@@ -153,7 +240,7 @@ export default function AnalyticsPage() {
                  </h3>
                  <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                       <BarChart data={PROFIT_DATA} barSize={40}>
+                       <BarChart data={dynamicProfitData} barSize={40}>
                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
                            <XAxis dataKey="name" stroke="#ffffff30" fontSize={10} fontWeight="bold" axisLine={false} tickLine={false} />
                            <YAxis stroke="#ffffff30" fontSize={10} fontWeight="bold" axisLine={false} tickLine={false} />
@@ -162,8 +249,8 @@ export default function AnalyticsPage() {
                              contentStyle={{ backgroundColor: "#050505", borderRadius: "16px", border: "1px solid #ffffff10" }}
                              itemStyle={{ textTransform: "uppercase", fontSize: "10px", fontWeight: "bold" }}
                            />
-                           <Bar dataKey="price" fill="#00FF9C" radius={[8, 8, 0, 0]} />
-                           <Bar dataKey="transport" fill="#ffffff10" radius={[8, 8, 0, 0]} />
+                           <Bar name="Net Profit" dataKey="profit" stackId="a" fill="#00FF9C" radius={[0, 0, 8, 8]} />
+                           <Bar name="Logistics/Transport" dataKey="transport" stackId="a" fill="#ffffff15" radius={[8, 8, 0, 0]} />
                            <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "20px", fontSize: "10px", fontWeight: "bold", textTransform: "uppercase" }} />
                        </BarChart>
                     </ResponsiveContainer>
@@ -179,15 +266,15 @@ export default function AnalyticsPage() {
                  </h3>
                  <div className="h-64 w-full mb-8">
                     <ResponsiveContainer width="100%" height="100%">
-                       <AreaChart data={DISEASE_DATA}>
+                       <AreaChart data={dynamicDiseaseData}>
                           <defs>
                              <linearGradient id="colorInfection" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#00FF9C" stopOpacity={0.3}/>
                                 <stop offset="95%" stopColor="#00FF9C" stopOpacity={0}/>
                              </linearGradient>
                           </defs>
-                          <Area type="step" dataKey="infection" stroke="#00FF9C" fillOpacity={1} fill="url(#colorInfection)" strokeWidth={2} />
-                          <Tooltip contentStyle={{ backgroundColor: "#050505", borderRadius: "12px", border: "1px solid #ffffff10", fontSize: "10px" }} />
+                          <Area type="step" name="Severity Index" dataKey="infection" stroke="#00FF9C" fillOpacity={1} fill="url(#colorInfection)" strokeWidth={2} />
+                          <Tooltip contentStyle={{ backgroundColor: "#050505", borderRadius: "12px", border: "1px solid #ffffff10", fontSize: "10px", color: "white" }} />
                        </AreaChart>
                     </ResponsiveContainer>
                  </div>

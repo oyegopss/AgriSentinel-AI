@@ -11,7 +11,9 @@ import {
   ShieldCheck,
   TrendingUp,
   BrainCircuit,
-  Zap
+  Zap,
+  Volume2,
+  Square
 } from "lucide-react";
 
 export type DecisionType = "TREAT" | "SELL" | "WAIT" | "MONITOR" | "CRITICAL";
@@ -24,6 +26,59 @@ interface DecisionEngineProps {
 }
 
 export const DecisionEngine = ({ decision, reasoning, confidence, loading }: DecisionEngineProps) => {
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [actionState, setActionState] = useState<"idle" | "authorizing" | "authorized">("idle");
+
+  const handleAuthorize = () => {
+    setActionState("authorizing");
+    setTimeout(() => {
+      setActionState("authorized");
+      alert("✓ Action Authorized successfully!\nConnecting to FPO Logistics/Partners...");
+      setTimeout(() => setActionState("idle"), 2000);
+    }, 1500);
+  };
+
+  useEffect(() => {
+    // Cleanup synthesis on unmount
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleSpeak = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      alert("Speech synthesis is not supported in this browser.");
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const textToSpeak = reasoning || "Analyzing crop conditions. Please wait.";
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    // Attempt Indian English voice format if available
+    const voices = window.speechSynthesis.getVoices();
+    const indianVoice = voices.find((v) => v.lang.includes("en-IN"));
+    if (indianVoice) {
+      utterance.voice = indianVoice;
+    }
+    utterance.lang = "en-IN";
+    utterance.pitch = 1.0;
+    utterance.rate = 0.95;
+    
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const getStyle = (type: DecisionType | null) => {
     if (!type) return "from-gray-900/20 to-gray-800/5 border-gray-700/40 text-gray-400 shadow-gray-900/10";
@@ -95,9 +150,36 @@ export const DecisionEngine = ({ decision, reasoning, confidence, loading }: Dec
                    <div className="h-px grow bg-white/10"></div>
                 </div>
                 
-                <p className="max-w-2xl text-lg font-medium leading-relaxed opacity-90 sm:text-xl">
-                  {reasoning || "Please complete the steps below to generate a unified recommendation."}
-                </p>
+                <div className="flex flex-col gap-4">
+                  <p className="max-w-2xl text-lg font-medium leading-relaxed opacity-90 sm:text-xl">
+                    {reasoning || "Please complete the steps below to generate a unified recommendation."}
+                  </p>
+                  
+                  {/* Voice Synthesis Button */}
+                  {decision && (
+                    <button 
+                      onClick={handleSpeak}
+                      className="group flex w-min whitespace-nowrap items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1.5 px-3 transition-colors hover:bg-white/10"
+                    >
+                      {isSpeaking ? (
+                         <>
+                           <Square className="h-3.5 w-3.5 text-white/70 group-hover:text-white" fill="currentColor" />
+                           <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 group-hover:text-white">Stop</span>
+                           <div className="flex items-center gap-0.5 ml-1">
+                             <div className="w-0.5 h-2 bg-[#00C3FF] animate-[pulse_1s_ease-in-out_infinite]" />
+                             <div className="w-0.5 h-3 bg-[#00C3FF] animate-[pulse_1.2s_ease-in-out_infinite]" />
+                             <div className="w-0.5 h-1.5 bg-[#00C3FF] animate-[pulse_0.8s_ease-in-out_infinite]" />
+                           </div>
+                         </>
+                      ) : (
+                         <>
+                           <Volume2 className="h-3.5 w-3.5 text-[#00FF9C]" />
+                           <span className="text-[10px] font-bold uppercase tracking-widest text-[#00FF9C]/80 group-hover:text-[#00FF9C]">Read Aloud</span>
+                         </>
+                      )}
+                    </button>
+                  )}
+                </div>
 
                 {decision && (
                   <div className="flex flex-wrap gap-6 pt-4">
@@ -125,16 +207,27 @@ export const DecisionEngine = ({ decision, reasoning, confidence, loading }: Dec
         <div className="lg:w-72">
           {!loading && decision && (
             <motion.button 
+              onClick={handleAuthorize}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`group flex w-full items-center justify-between rounded-3xl p-6 text-black transition-all shadow-[0_10px_30px_rgba(0,0,0,0.3)] ${getButtonColor(decision)}`}
             >
               <div className="text-left">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Authorize Action</p>
-                <p className="font-display text-xl font-bold tracking-widest">Proceed Now</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+                  {actionState === "idle" ? "Authorize Action" : actionState === "authorizing" ? "Connecting..." : "Authorized ✓"}
+                </p>
+                <p className="font-display text-lg font-bold tracking-tight">
+                   {decision === "SELL" ? "Connect FPO Logistics" : decision === "TREAT" || decision === "CRITICAL" ? "Deploy Treatment" : "Monitor Field"}
+                </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/10 group-hover:bg-black/20 transition-all">
-                <ArrowRight className="h-6 w-6" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/10 transition-transform group-hover:bg-black/20">
+                {actionState === "authorizing" ? (
+                   <div className="w-5 h-5 rounded-full border-2 border-black/20 border-t-black animate-spin" />
+                ) : actionState === "authorized" ? (
+                   <CheckCircle2 className="h-5 w-5 opacity-80" />
+                ) : (
+                   <ArrowRight className="h-5 w-5 opacity-80 transition-transform group-hover:translate-x-1" />
+                )}
               </div>
             </motion.button>
           )}

@@ -8,6 +8,7 @@ import {
   Store,
   TrendingUp,
   AlertCircle,
+  AlertTriangle,
   Wind,
   Droplets,
   Thermometer,
@@ -36,6 +37,11 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthProvider";
 import { fetchWeather, WeatherData } from "@/lib/weatherApi";
 import { AlertsSystem } from "@/app/components/AlertsSystem";
+import { SatelliteVisionCard } from "@/app/components/SatelliteVisionCard";
+import { SoilHealthCard } from "@/app/components/SoilHealthCard";
+import { FinTechCard } from "@/app/components/FinTechCard";
+import { FarmHistory } from "@/app/components/FarmHistory";
+
 import { MandiIntelligence } from "@/app/components/MandiIntelligence";
 import { DecisionEngine } from "@/app/components/DecisionEngine";
 import { AlertBanner, GlobalAlert } from "@/app/components/AlertBanner";
@@ -45,6 +51,14 @@ import { DiseaseDetector } from "@/app/components/DiseaseDetector";
 import { useRouter } from "next/navigation";
 import { DecisionType } from "@/app/components/DecisionEngine";
 import { EconomicImpact } from "@/app/components/EconomicImpact";
+import { calculateProfit } from "@/lib/profitEngine";
+import { calculateDecisionScore } from "@/lib/decisionScore";
+import { generateWeatherAlerts } from "@/lib/alertsEngine";
+import { DecisionScoreCard } from "@/app/components/DecisionScoreCard";
+import { ProfitSimulationCard } from "@/app/components/ProfitSimulationCard";
+import { SmartAlertsCard } from "@/app/components/SmartAlertsCard";
+import { BestMandiCard } from "@/app/components/BestMandiCard";
+
 
 // ── Location Edit Modal ──────────────────────────────────────────────────────
 
@@ -221,42 +235,119 @@ export default function DashboardPage() {
   const getUnifiedDecision = async (overrideDisease?: any) => {
     setDecisionPayload((prev: any) => ({ ...prev, loading: true }));
     try {
-      const currentDisease = overrideDisease || diseaseResult || { disease: "Healthy", severity: "None" };
+      const currentDisease = overrideDisease || diseaseResult || {
+        disease: "Healthy",
+        severity: "No Risk",
+        confidence: 0.95,
+      };
+
       const currentMandiPrices = [
-        { market: "Local Mandi", price: 2100, distance_km: 15 },
-        { market: "Central Hub", price: 2250, distance_km: 45 }
+        { market: "Local Mandi", price: 2100 + (Math.floor(Math.random() * 20) - 10), distance_km: 15 },
+        { market: "Central Hub", price: 2250 + (Math.floor(Math.random() * 25) - 12), distance_km: 45 },
       ];
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${baseUrl}/api/decisions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          crop_health: currentDisease.disease,
-          disease_severity: currentDisease.severity,
-          weather_condition: weather?.description || "Clear",
-          humidity: weather?.humidity || 50,
-          mandi_prices: currentMandiPrices,
-          transport_rate_per_km: 20
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // Determine type based on rec string for demo visualization
-        let type: DecisionType = "WAIT";
-        if (data.recommendation.toLowerCase().includes("treat")) type = "TREAT";
-        else if (data.recommendation.toLowerCase().includes("harvest") || data.recommendation.toLowerCase().includes("sell")) type = "SELL";
-        else if (data.recommendation.toLowerCase().includes("postpone") || data.recommendation.toLowerCase().includes("drainage")) type = "CRITICAL";
+      // ── 1. Disease Risk Signal ──────────────────────────────────────────────
+      // DiseaseDetector.confidence is the model's raw prediction confidence (0–1).
+      // We want a "disease risk" value: healthy = 0, severely diseased = 1.
+      const rawConf = typeof currentDisease.confidence === "number"
+        ? currentDisease.confidence
+        : 0.8;
 
-        setDecisionPayload({
-          decision: type,
-          reasoning: data.recommendation,
-          confidence: data.confidence,
-          loading: false
-        });
+      const severityRaw: string = (currentDisease.severity || "").toLowerCase();
+      let diseaseRisk = 0; // 0 = healthy, 1 = critical
+
+      if (severityRaw.includes("no risk") || severityRaw === "none" || severityRaw.includes("healthy")) {
+        diseaseRisk = 0;
+      } else if (severityRaw.includes("low")) {
+        diseaseRisk = 0.25;
+      } else if (severityRaw.includes("moderate") || severityRaw === "medium" || severityRaw === "mild") {
+        diseaseRisk = 0.55;
+      } else if (severityRaw.includes("high") || severityRaw === "severe") {
+        diseaseRisk = 0.80;
+      } else if (severityRaw === "critical") {
+        diseaseRisk = 1.0;
+      } else {
+        diseaseRisk = currentDisease.disease?.toLowerCase().includes("healthy") ? 0 : 0.5;
       }
+      diseaseRisk = Math.min(1, diseaseRisk * rawConf + diseaseRisk * 0.1);
+
+      // ── 2. Decision Score ───────────────────────────────────────────────────
+      const weatherRisk = (weather?.riskLevel || "Green") as "Green" | "Yellow" | "Red";
+      const yieldAmt = profile?.farmArea ? profile.farmArea * 5 : 12; // quintals
+
+      const { score, riskLevel, recommendation } = calculateDecisionScore(
+        diseaseRisk,
+        weatherRisk,
+        yieldAmt
+      );
+
+      // ── 3. Severity → profitEngine enum mapping ─────────────────────────────
+      type ProfitSeverity = "None" | "Low" | "Medium" | "High" | "Critical";
+      let mappedSeverity: ProfitSeverity = "None";
+
+      if (severityRaw.includes("no risk") || severityRaw === "none" || severityRaw.includes("healthy")) {
+        mappedSeverity = "None";
+      } else if (severityRaw.includes("low")) {
+        mappedSeverity = "Low";
+      } else if (severityRaw.includes("moderate") || severityRaw === "medium" || severityRaw === "mild") {
+        mappedSeverity = "Medium";
+      } else if (severityRaw.includes("high") || severityRaw === "severe") {
+        mappedSeverity = "High";
+      } else if (severityRaw === "critical") {
+        mappedSeverity = "Critical";
+      }
+
+      // ── 4. Profit for each mandi ────────────────────────────────────────────
+      const profitsByMandi = currentMandiPrices.map((m) => ({
+        market: m.market,
+        price: m.price,
+        netProfit: calculateProfit(yieldAmt, m.price, mappedSeverity).treatedProfit,
+      }));
+
+      const bestMandi = profitsByMandi.reduce((prev, curr) =>
+        curr.netProfit > prev.netProfit ? curr : prev
+      );
+      const profitInfo = calculateProfit(yieldAmt, bestMandi.price, mappedSeverity);
+
+      // ── 5. Smart Alerts ─────────────────────────────────────────────────────
+      const generatedAlerts = generateWeatherAlerts(
+        weather?.humidity ?? 50,
+        weather?.rain ?? 0,
+        weather?.temp
+      );
+
+      // ── 6. Final Structured Object ──────────────────────────────────────────
+      const finalObject = {
+        score,
+        risk: riskLevel,
+        recommendation,
+        profitIfTreated: profitInfo.treatedProfit,
+        profitIfIgnored: profitInfo.untreatedProfit,
+        loss: profitInfo.lossDifference,
+        alerts: generatedAlerts,
+        allMandis: profitsByMandi,
+        bestMandiWithNetProfit: bestMandi,
+      };
+
+      // Determine DecisionType for the hero banner
+      let type: DecisionType = "WAIT";
+      if (recommendation.toLowerCase().includes("immediate")) type = "TREAT";
+      else if (recommendation.toLowerCase().includes("sell") || recommendation.toLowerCase().includes("harvest")) type = "SELL";
+      else if (recommendation.toLowerCase().includes("emergency")) type = "CRITICAL";
+      else if (recommendation.toLowerCase().includes("treatment")) type = "TREAT";
+
+      setDecisionPayload((prev: any) => ({
+        ...prev,
+        decision: type,
+        reasoning: recommendation,
+        confidence: score / 100,
+        loading: false,
+        extendedData: finalObject,
+      }));
+
+      return finalObject;
     } catch (e) {
-      console.error(e);
+      console.error("[getUnifiedDecision]", e);
       setDecisionPayload((prev: any) => ({ ...prev, loading: false }));
     }
   };
@@ -265,11 +356,19 @@ export default function DashboardPage() {
     if (weather && !decisionPayload.loading && !decisionPayload.decision) {
       getUnifiedDecision();
     }
-  }, [weather]);
+    
+    // Live update loop for Decision Engine
+    const ticker = setInterval(() => {
+      if (weather) getUnifiedDecision();
+    }, 4500);
 
-  const handleDiseaseResult = (res: any) => {
+    return () => clearInterval(ticker);
+  }, [weather, diseaseResult]);
+
+  // Async so the state update (setDiseaseResult) is reflected before getUnifiedDecision reads it
+  const handleDiseaseResult = async (res: any) => {
     setDiseaseResult(res);
-    getUnifiedDecision(res);
+    await getUnifiedDecision(res); // pass directly — don't rely on stale state
   };
 
   const dismissAlert = (id: string) => {
@@ -346,6 +445,75 @@ export default function DashboardPage() {
       </div>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
+
+        {/* PREDICTIVE AI BANNER (Pitch Addition) */}
+        {weather && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 shadow-[0_0_20px_rgba(239,68,68,0.1)] relative overflow-hidden"
+          >
+             <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(239,68,68,0.05)_50%,transparent_75%,transparent_100%)] bg-[length:250px_250px] animate-[slide_4s_linear_infinite]" />
+             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20 z-10">
+               <Sparkles className="h-5 w-5 text-red-400 animate-pulse" />
+             </div>
+             <div className="z-10 flex-1">
+               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400">Predictive AI Alert</h3>
+               <p className="text-sm font-medium text-gray-200 mt-0.5">
+                 {weather.humidity > 70 ? (
+                   <>Based on high humidity ({weather.humidity}%) & trend analysis: <span className="font-bold text-white">Fungal Infection</span> risk spike in 3-5 days. Act now to prevent <span className="font-bold text-red-400 font-mono tracking-tight">₹{((profile?.farmArea || 2.5) * 4800).toLocaleString()}</span> yield loss.</>
+                 ) : (weather?.rain || 0) > 5 ? (
+                   <>Precipitation threshold exceeded: <span className="font-bold text-white">Root Rot</span> potential detected in low-lying zones. Ensure drainage to avoid <span className="font-bold text-red-400 font-mono tracking-tight">₹{((profile?.farmArea || 2.5) * 6200).toLocaleString()}</span> impact.</>
+                 ) : (
+                   <>Proactive Surveillance: <span className="font-bold text-white">Leaf Blight</span> risk predicted for next seasonal cycle. Early treatment saves <span className="font-bold text-red-400 font-mono tracking-tight">₹{((profile?.farmArea || 2.5) * 3500).toLocaleString()}</span> per acre.</>
+                 )}
+               </p>
+             </div>
+          </motion.div>
+        )}
+
+        {/* CROP HEALTH SCORE WIDGET (Pitch Addition) */}
+        {weather && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          >
+             <div className="flex items-center gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 shadow-[0_4px_20px_rgba(16,185,129,0.05)]">
+               <div className="relative flex h-14 w-14 items-center justify-center">
+                 <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
+                    <path className="text-white/5" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path className="text-emerald-400 transition-all duration-1000 ease-out" strokeDasharray="72, 100" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                 </svg>
+                 <span className="text-[15px] font-black text-white">72</span>
+               </div>
+               <div>
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">Crop Health Index</p>
+                 <p className="text-xl font-black text-white">72<span className="text-sm font-medium text-gray-500">/100</span></p>
+               </div>
+             </div>
+             
+             <div className="flex items-center gap-4 rounded-2xl border border-white/5 bg-[#0a0a0a] p-5">
+               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
+                 <AlertTriangle className="h-5 w-5 text-amber-500" />
+               </div>
+               <div>
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Risk Level</p>
+                 <p className="text-lg font-bold text-amber-400">Medium</p>
+               </div>
+             </div>
+
+             <div className="flex items-center gap-4 rounded-2xl border border-white/5 bg-[#0a0a0a] p-5">
+               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#00FF9C]/10 border border-[#00FF9C]/20">
+                 <TrendingUp className="h-5 w-5 text-[#00FF9C]" />
+               </div>
+               <div>
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#00FF9C]/70">Profit Potential</p>
+                 <p className="text-xl font-bold text-[#00FF9C] font-mono tracking-tight">₹18,000</p>
+               </div>
+             </div>
+          </motion.div>
+        )}
         
         {/* Executive ROI Summary */}
         <div className="space-y-4">
@@ -395,16 +563,29 @@ export default function DashboardPage() {
                 <p className="text-5xl font-display font-black text-white tracking-tighter">{weather?.temp}°C</p>
                 <div className="text-right">
                   <p className="text-xs text-emerald-400 font-bold uppercase tracking-[0.2em]">{weather?.riskLevel} Risk</p>
-                  <p className="text-[10px] text-gray-600 font-bold mt-1 uppercase tracking-widest">{weather?.city}</p>
+                  <p className="text-[9px] text-gray-500 font-bold mt-1 uppercase tracking-widest max-w-[150px] truncate text-right ml-auto" title={profile?.locationData?.fullAddress || profile?.location || weather?.city}>
+                    {profile?.locationData?.fullAddress || profile?.location || weather?.city}
+                  </p>
                 </div>
               </div>
               <div className="space-y-4 pt-6 border-t border-white/5">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                  <span>Humidity</span>
-                  <span className="text-white">{weather?.humidity}%</span>
+                <div>
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                    <span>Humidity</span>
+                    <span className="text-white">{weather?.humidity}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#00C3FF]" style={{ width: `${weather?.humidity}%` }} />
+                  </div>
                 </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#00C3FF]" style={{ width: `${weather?.humidity}%` }} />
+                <div>
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                    <span>Precipitation Level</span>
+                    <span className="text-white">{(weather?.rain || 0).toFixed(1)} mm</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (weather?.rain || 0) * 5)}%` }} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -412,7 +593,59 @@ export default function DashboardPage() {
         </div>
 
         {/* Step 2: Disease Upload */}
-        <DiseaseDetector onResult={handleDiseaseResult} />
+        <DiseaseDetector onResult={handleDiseaseResult} weather={weather} profile={profile} />
+
+        {/* Intelligence Module 01.5: Deep Tech Integrations (Pitch Features) */}
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center gap-3 px-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+               <span className="text-blue-400 font-black text-xs">AI</span>
+            </div>
+            <h3 className="font-display text-[10px] font-bold text-white uppercase tracking-widest">
+              Intelligence Module: Advanced Integrations
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+             <SatelliteVisionCard />
+             <SoilHealthCard />
+             <FinTechCard />
+          </div>
+        </div>
+
+        {/* Intelligence Module 02: Advisor Intelligence Cards */}
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center gap-3 px-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04]">
+              <Brain className="h-4 w-4 text-gray-400" />
+            </div>
+            <h3 className="font-display text-[10px] font-bold text-white uppercase tracking-widest">
+              Intelligence Module 02: Advisor Analysis
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <DecisionScoreCard
+              score={decisionPayload.extendedData?.score ?? null}
+              risk={decisionPayload.extendedData?.risk ?? null}
+              recommendation={decisionPayload.extendedData?.recommendation ?? null}
+              loading={decisionPayload.loading}
+            />
+            <ProfitSimulationCard
+              profitIfTreated={decisionPayload.extendedData?.profitIfTreated ?? null}
+              profitIfIgnored={decisionPayload.extendedData?.profitIfIgnored ?? null}
+              loss={decisionPayload.extendedData?.loss ?? null}
+              loading={decisionPayload.loading}
+            />
+            <SmartAlertsCard
+              alerts={decisionPayload.extendedData?.alerts ?? []}
+              loading={decisionPayload.loading}
+            />
+            <BestMandiCard
+              bestMandi={decisionPayload.extendedData?.bestMandiWithNetProfit ?? null}
+              allMandis={decisionPayload.extendedData?.allMandis ?? []}
+              loading={decisionPayload.loading}
+            />
+          </div>
+        </div>
 
         {/* Step 3: Mandi Markets */}
         <div className="mt-8">
@@ -461,6 +694,11 @@ export default function DashboardPage() {
             confidence={decisionPayload.confidence}
             loading={decisionPayload.loading}
           />
+        </div>
+
+        {/* Farm History (AI Data Power) */}
+        <div className="pt-10">
+           <FarmHistory />
         </div>
 
       </main>

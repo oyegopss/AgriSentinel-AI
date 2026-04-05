@@ -16,7 +16,7 @@ export const EconomicImpact = ({ diseaseResult, weather, farmArea = 2.5 }: Econo
   const totalWeight = farmArea * baselineYieldPerAcre;
   const avgPricePerKg = 22.50; // ₹/kg
   
-  const potentialRevenue = totalWeight * avgPricePerKg;
+  const basePotentialRevenue = totalWeight * avgPricePerKg;
   
   // Yield loss based on disease severity
   let yieldLossPct = 0;
@@ -24,8 +24,31 @@ export const EconomicImpact = ({ diseaseResult, weather, farmArea = 2.5 }: Econo
   else if (diseaseResult?.severity === "Medium" || diseaseResult?.severity === "Moderate Risk") yieldLossPct = 15;
   else if (diseaseResult?.severity === "High" || diseaseResult?.severity === "High Risk") yieldLossPct = 35;
   
-  const economicRisk = potentialRevenue * (yieldLossPct / 100);
-  const protectedValue = economicRisk * 0.85; // Assuming 85% efficacy of treatment
+  const baseEconomicRisk = basePotentialRevenue * (yieldLossPct / 100);
+  const baseProtectedValue = baseEconomicRisk * 0.85; // Assuming 85% efficacy of treatment
+
+  const [livePotentialRevenue, setLivePotentialRevenue] = React.useState(basePotentialRevenue);
+  const [liveProtectedValue, setLiveProtectedValue] = React.useState(baseProtectedValue);
+
+  // Live Telemetry Fluctuation
+  React.useEffect(() => {
+    setLivePotentialRevenue(basePotentialRevenue);
+    setLiveProtectedValue(baseProtectedValue);
+    
+    // Every 2.5 seconds, shift values by ±15 rupees to look like live market ticks
+    const interval = setInterval(() => {
+      setLivePotentialRevenue(base => {
+        const change = Math.floor(Math.random() * 31) - 15;
+        return basePotentialRevenue + change;
+      });
+      setLiveProtectedValue(base => {
+        const change = Math.floor(Math.random() * 21) - 10;
+        return baseProtectedValue + change;
+      });
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [basePotentialRevenue, baseProtectedValue]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -42,7 +65,10 @@ export const EconomicImpact = ({ diseaseResult, weather, farmArea = 2.5 }: Econo
         </div>
         <div>
           <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Potential Revenue</h4>
-          <p className="text-2xl font-display font-black text-white">₹{potentialRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-display font-black text-white flex items-center gap-2">
+            ₹{livePotentialRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </p>
           <p className="text-[9px] text-gray-600 mt-2 font-medium">EST. FOR {farmArea} ACRES @ ₹{avgPricePerKg}/KG</p>
         </div>
       </motion.div>
@@ -60,7 +86,7 @@ export const EconomicImpact = ({ diseaseResult, weather, farmArea = 2.5 }: Econo
         </div>
         <div>
           <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Economic Risk</h4>
-          <p className="text-2xl font-display font-black text-red-400">₹{economicRisk.toLocaleString()}</p>
+          <p className="text-2xl font-display font-black text-red-400">₹{baseEconomicRisk.toLocaleString()}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 font-bold uppercase tracking-widest">-{yieldLossPct}% Yield</span>
             <span className="text-[9px] text-gray-600 font-medium">DUE TO {diseaseResult?.disease?.split(' (')[0] || 'ENVIRONMENT'}</span>
@@ -82,7 +108,10 @@ export const EconomicImpact = ({ diseaseResult, weather, farmArea = 2.5 }: Econo
         </div>
         <div className="relative">
           <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Protected Value</h4>
-          <p className="text-2xl font-display font-black text-[#00FF9C]">₹{protectedValue.toLocaleString()}</p>
+          <p className="text-2xl font-display font-black text-[#00FF9C] flex items-center gap-2">
+            ₹{liveProtectedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <span className="h-2 w-2 rounded-full bg-[#00FF9C] animate-pulse opacity-50"></span>
+          </p>
           <p className="text-[9px] text-[#00FF9C]/60 mt-2 font-medium flex items-center gap-1 uppercase tracking-widest">
             AI Recommendation applied <ArrowRight className="h-3 w-3" />
           </p>

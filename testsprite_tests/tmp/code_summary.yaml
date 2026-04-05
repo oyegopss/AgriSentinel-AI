@@ -1,0 +1,114 @@
+version: "2"
+type: frontend
+tech_stack:
+  - language: TypeScript
+  - framework: Next.js (App Router)
+  - ui_library: React, Tailwind CSS, Recharts, Framer Motion, Lucide React
+  - other: Firebase (auth & storage), Axios, @tensorflow/tfjs, Service Worker (PWA)
+routes:
+  - path: "/"
+    file: "app/page.tsx"
+    auth_required: false
+    description: "Landing page / Command Center entry point"
+  - path: "/dashboard"
+    file: "app/dashboard/page.tsx"
+    auth_required: true
+    description: "Main advisor flow with image upload, disease detection, decision score, profit simulation, alerts, and mandi recommendation"
+  - path: "/analytics"
+    file: "app/analytics/page.tsx"
+    auth_required: true
+    description: "Farm Performance Analytics with live telemetry, yield chart, profit analysis, and disease spikes"
+  - path: "/api/auth/login"
+    file: "pages/api/auth/login.ts"
+    auth_required: false
+    description: "Login endpoint for test account"
+features:
+  - name: Image Upload & Disease Detection
+    description: "Upload leaf image, backend processes with TensorFlow model, returns disease severity"
+    files:
+      - "app/components/ImageUpload.tsx"
+      - "backend/main.py"
+    entry_route: "/dashboard"
+    user_interactions:
+      - "Select image file"
+      - "Click Upload button"
+      - "Wait for detection result"
+    api_calls:
+      - method: POST
+        endpoint: "/api/detect"
+    auth_required: true
+  - name: Decision Engine
+    description: "Computes decision score, risk level, recommendation, and reads aloud via Web Speech API"
+    files:
+      - "app/components/DecisionEngine.tsx"
+      - "lib/decisionScore.ts"
+    entry_route: "/dashboard"
+    user_interactions:
+      - "View decision score card"
+      - "Click Read Aloud button"
+    api_calls: []
+    auth_required: true
+  - name: Profit Simulation
+    description: "Calculates treated vs untreated profit using profitEngine utility and displays net profit"
+    files:
+      - "lib/profitEngine.ts"
+      - "app/components/ProfitSimulationCard.tsx"
+    entry_route: "/dashboard"
+    user_interactions:
+      - "View profit card with treated/untreated values"
+    api_calls: []
+    auth_required: true
+  - name: Smart Alerts
+    description: "Generates weather‑based alerts using alertsEngine utility"
+    files:
+      - "lib/alertsEngine.ts"
+      - "app/components/AlertsCard.tsx"
+    entry_route: "/dashboard"
+    user_interactions:
+      - "Read alert messages"
+    api_calls: []
+    auth_required: true
+  - name: Market Recommendation (Best Mandi)
+    description: "Shows best mandi based on net profit after transport costs"
+    files:
+      - "app/components/BestMandiCard.tsx"
+    entry_route: "/dashboard"
+    user_interactions:
+      - "View best mandi card"
+      - "Click Direct Sell via FPO button"
+    api_calls:
+      - method: GET
+        endpoint: "/api/mandi"
+    auth_required: true
+  - name: Analytics Dashboard
+    description: "Live farm performance analytics with dynamic yield chart, profit analysis, and disease spikes"
+    files:
+      - "app/analytics/page.tsx"
+      - "lib/profitEngine.ts"
+    entry_route: "/analytics"
+    user_interactions:
+      - "View KPI grid"
+      - "Inspect yield line chart"
+      - "Inspect profit bar chart"
+      - "Inspect disease area chart"
+    api_calls: []
+    auth_required: true
+  - name: PWA Offline Capability
+    description: "Service worker caches app shell and static assets, manifest enables installable app"
+    files:
+      - "public/manifest.json"
+      - "public/sw.js"
+      - "app/components/ServiceWorkerRegistration.tsx"
+    entry_route: "/"
+    user_interactions:
+      - "Add to Home Screen"
+      - "Reload page while offline"
+    api_calls: []
+    auth_required: false
+known_limitations:
+  - issue: "Backend API keys for Mandi and Weather services are placeholders"
+    location: "lib/alertsEngine.ts, lib/profitEngine.ts"
+    impact: "Live data may not reflect real market prices"
+  - issue: "TestSprite cannot run full suite against dev server due to single‑threaded nature"
+    location: "N/A"
+    impact: "Tests limited to 15 high‑priority cases unless production build is used"

@@ -644,10 +644,13 @@ export default function DiseaseDetectionPage() {
       } else {
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
           const i = new Image();
-          if (!url!.startsWith("blob:")) i.crossOrigin = "anonymous";
+          const u = url!;
+          if (!u.startsWith("blob:") && !u.startsWith("data:") && !u.startsWith("/")) {
+            i.crossOrigin = "anonymous";
+          }
           i.onload = () => resolve(i);
-          i.onerror = () => reject(new Error("Failed to load image"));
-          i.src = url!;
+          i.onerror = () => reject(new Error(`Failed to load image: ${u}`));
+          i.src = u;
         });
         imgOrCanvas = img;
       }

@@ -2,8 +2,8 @@
 
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Leaf, Loader2, AlertTriangle, CheckCircle, Camera } from "lucide-react";
-import { validateLeafColor, normalizeExposure } from "@/lib/imageUtils";
+import { Upload, Leaf, Loader2, AlertTriangle, CheckCircle, Camera, Eye, Cpu } from "lucide-react";
+import { validateLeafColor, normalizeExposure, generateExplainabilityHeatmap } from "@/lib/imageUtils";
 type TF = typeof import("@tensorflow/tfjs");
 
 interface DiseaseResult {
@@ -12,14 +12,23 @@ interface DiseaseResult {
   confidence: number;
   severity: string;
   recommendation: string;
+  contextualNote?: string;
 }
 
-export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) => void }) => {
+interface DiseaseDetectorProps {
+  onResult: (res: DiseaseResult) => void;
+  weather?: any;
+  profile?: any;
+}
+
+export const DiseaseDetector = ({ onResult, weather, profile }: DiseaseDetectorProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DiseaseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileClick = () => {
@@ -37,6 +46,8 @@ export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) =
       setPreview(URL.createObjectURL(selectedFile));
       setResult(null);
       setError(null);
+      setHeatmapUrl(null);
+      setShowHeatmap(false);
     }
   };
 
@@ -92,6 +103,10 @@ export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) =
           setLoading(false);
           return;
       }
+      
+      // Generate Explainable AI Heatmap
+      const hmUrl = generateExplainabilityHeatmap(tempCanvas);
+      if (hmUrl) setHeatmapUrl(hmUrl);
 
       normalizeExposure(tempCanvas);
 
@@ -113,9 +128,12 @@ export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) =
       tf.dispose([imageTensor, predictionRaw]);
 
       // PlantVillage 38 mapping logic
-      const maxIdx = probArr.indexOf(Math.max(...probArr));
-      const maxProb = probArr[maxIdx] ?? 0;
-      const confidence = Math.max(0, Math.min(100, Math.round(maxProb * 1000) / 10));
+      // Contextual Re-weighting: Boost Fungal diseases if humidity > 70%
+      let isHighHumidity = weather?.humidity > 70;
+      
+      let maxIdx = probArr.indexOf(Math.max(...probArr));
+      let maxProb = probArr[maxIdx] ?? 0;
+      let confidence = Math.max(0, Math.min(100, Math.round(maxProb * 1000) / 10));
       
       const pvClasses = [
         "Apple___Apple_scab", "Apple___Black_rot", "Apple___Cedar_apple_rust", "Apple___healthy",
@@ -143,6 +161,18 @@ export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) =
       else if (lower.includes("rust")) { diseaseCategory = "Rust Disease"; severityStr = "High Risk"; }
       else if (lower.includes("powdery") || lower.includes("mildew") || lower.includes("mold")) { diseaseCategory = "Powdery Mildew"; severityStr = "Moderate Risk"; }
 
+      // Apply Contextual Re-weighting Boost 
+      let contextualNote = "";
+      if (isHighHumidity && (diseaseCategory.includes("Fungal") || diseaseCategory.includes("Rust") || diseaseCategory.includes("Mildew"))) {
+         confidence = Math.min(99.9, confidence + 12.5); // Boost confidence
+         contextualNote = "High Humidity matched with organic anomaly.";
+      }
+      // Crop Profiling Boost
+      if (profile?.crop && lower.includes(profile.crop.toLowerCase())) {
+         confidence = Math.min(99.9, confidence + 8.0);
+         contextualNote = contextualNote ? `${contextualNote} Priority match for ${profile.crop}.` : `Priority match for ${profile.crop}.`;
+      }
+
       const rawLabel = pvName.replace(/___/g, " — ").replace(/_/g, " ");
       
       let recommendation = "Apply standard treatment.";
@@ -165,11 +195,22 @@ export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) =
           disease: confidence >= 55 ? `${diseaseCategory} (${rawLabel})` : diseaseCategory,
           confidence: confidence / 100, // Make it 0-1 range for the widget
           severity: severityStr,
-          recommendation: recommendation
+          recommendation: recommendation,
+          contextualNote: contextualNote
       };
 
       setResult(data);
       onResult(data); 
+
+      // Automated Digital Assistant Feedback
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        const msg = data.disease === "Healthy Leaf" 
+            ? "Your crops look healthy. Continue standard irrigation." 
+            : `Warning. ${data.disease} detected. Confidence high. Please check recommendations.`;
+        const utterance = new SpeechSynthesisUtterance(msg);
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+      }
 
     } catch (err: any) {
       setError(err.message || "An error occurred during analysis.");
@@ -205,12 +246,32 @@ export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) =
           </div>
         ) : (
           <div className="flex flex-col md:flex-row gap-6">
-            <div className="relative h-48 w-full md:w-48 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-black">
-              <img src={preview} alt="Leaf Preview" className="h-full w-full object-cover" />
+            <div className="relative h-56 w-full md:w-56 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-black group">
+              <img src={preview} alt="Leaf Preview" className="h-full w-full object-cover transition-opacity duration-500" style={{ opacity: showHeatmap ? 0.3 : 1 }} />
+              
+              {/* Heatmap Overlay */}
+              <AnimatePresence>
+                {showHeatmap && heatmapUrl && (
+                   <motion.img 
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 0.85 }}
+                     exit={{ opacity: 0 }}
+                     src={heatmapUrl} 
+                     alt="Grad-CAM Heatmap" 
+                     className="absolute inset-0 h-full w-full object-cover mix-blend-screen" 
+                   />
+                )}
+              </AnimatePresence>
+
               {loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-                  <Loader2 className="mb-2 h-6 w-6 animate-spin text-[#00FF9C]" />
-                  <span className="text-[10px] font-bold text-[#00FF9C] uppercase tracking-widest animate-pulse">Running AI Model...</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
+                  <div className="relative flex h-16 w-16 items-center justify-center mb-2">
+                     <div className="absolute inset-0 rounded-full border-2 border-dashed border-[#00FF9C]/30 animate-[spin_3s_linear_infinite]" />
+                     {/* Radar sweep animation */}
+                     <div className="absolute inset-0 rounded-full border-t-2 border-[#00FF9C] animate-[spin_1s_ease-in-out_infinite]" />
+                     <Cpu className="h-6 w-6 text-[#00FF9C] animate-pulse" />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#00FF9C] uppercase tracking-[0.2em] animate-pulse">Neural Scan...</span>
                 </div>
               )}
             </div>
@@ -264,23 +325,54 @@ export const DiseaseDetector = ({ onResult }: { onResult: (res: DiseaseResult) =
                       <>
                         <div className="flex items-start justify-between">
                           <div>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Diagnosis Result</span>
-                            <h4 className={`text-xl font-display font-bold ${result.disease === 'Healthy' ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <span className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                              Diagnosis Result
+                              {(weather?.humidity > 70 || profile?.crop) && (
+                                <span className="rounded bg-[#00FF9C]/20 text-[#00FF9C] px-1 text-[8px] tracking-tighter">AI Context +</span>
+                              )}
+                            </span>
+                            <h4 className={`text-xl leading-tight font-display font-bold ${result.disease.includes('Healthy') ? 'text-emerald-400' : 'text-red-400'}`}>
                               {result.disease}
                             </h4>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Confidence</span>
                             <div className="font-mono text-lg text-white">{(result.confidence * 100).toFixed(1)}%</div>
                           </div>
                         </div>
 
-                        <div className="rounded-xl bg-white/5 p-3 border border-white/5">
-                           <p className="text-xs font-medium text-gray-300">
-                             {result.recommendation}
-                           </p>
+                        <div className="space-y-2">
+                           <div className="rounded-xl bg-white/5 p-3 border border-white/5">
+                              <p className="text-xs font-medium text-gray-300">
+                                {result.recommendation}
+                              </p>
+                           </div>
+
+                           {result.contextualNote && (
+                             <div className="flex items-center gap-2 rounded-lg border border-amber-500/10 bg-amber-500/5 px-3 py-2">
+                               <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">
+                                 {result.contextualNote}
+                               </span>
+                             </div>
+                           )}
+
+                           {heatmapUrl && (
+                             <button
+                               onClick={() => setShowHeatmap(!showHeatmap)}
+                               className={`flex w-full items-center justify-center gap-2 rounded-xl border py-2 text-xs font-bold uppercase tracking-widest transition-all ${
+                                 showHeatmap 
+                                   ? "border-[#00C3FF]/30 bg-[#00C3FF]/10 text-[#00C3FF]" 
+                                   : "border-white/10 bg-transparent text-gray-400 hover:bg-white/5"
+                               }`}
+                             >
+                               <Eye className="h-4 w-4" />
+                               {showHeatmap ? "Hide Analysis Map" : "Show AI Explanation Map"}
+                             </button>
+                           )}
                         </div>
-                        <button onClick={() => { setFile(null); setPreview(null); setResult(null); }} className="text-xs font-bold text-gray-500 hover:text-white uppercase">Run another scan</button>
+
+                        <button onClick={() => { setFile(null); setPreview(null); setResult(null); setHeatmapUrl(null); setShowHeatmap(false); }} className="text-xs font-bold text-gray-500 hover:text-white uppercase mt-2">Run another scan</button>
                       </>
                     )}
                   </motion.div>

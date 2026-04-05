@@ -39,20 +39,29 @@ export const VoiceInput = ({ onTranscript }: VoiceInputProps) => {
 
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Find highest quality Hindi voice
-    const hindiVoice = voices.find(v => (v.lang.includes("hi-IN") || v.name.includes("Hindi")) && !v.name.includes("Pulse"));
-    const fallbackVoice = voices.find(v => v.lang.includes("en-IN") || v.lang.includes("en-GB"));
-    
+    // Multilingual Voice Mapping
+    const hindiVoice = voices.find(v => v.lang.includes("hi-IN") && !v.name.includes("Pulse"));
+    const marathiVoice = voices.find(v => v.lang.includes("mr-IN"));
+    const tamilVoice = voices.find(v => v.lang.includes("ta-IN"));
+    const enVoice = voices.find(v => v.lang.includes("en-IN"));
+
+    // Set voice based on available ones
     if (hindiVoice) {
       utterance.voice = hindiVoice;
       utterance.lang = "hi-IN";
-    } else if (fallbackVoice) {
-      utterance.voice = fallbackVoice;
+    } else if (marathiVoice) {
+      utterance.voice = marathiVoice;
+      utterance.lang = "mr-IN";
+    } else if (tamilVoice) {
+      utterance.voice = tamilVoice;
+      utterance.lang = "ta-IN";
+    } else if (enVoice) {
+      utterance.voice = enVoice;
       utterance.lang = "en-IN";
     }
 
     utterance.pitch = 1.0; 
-    utterance.rate = 0.95; // Slightly slower for clarity
+    utterance.rate = 0.95;
     utterance.volume = 1.0;
     
     window.speechSynthesis.speak(utterance);

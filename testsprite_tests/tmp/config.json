@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "executionArgs": {
+    "projectName": "AgriSentinel AI",
+    "projectPath": "/Users/gopaljidwivedi/VS CODE/AgriSentinel AI",
+    "testIds": [],
+    "additionalInstruction": "Test again with bypassed authentication.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-roBrl6C806T5LFvhVpO4eXxvezdA9CNGsE0dRnTtvFg_qNtlBmA9dXtVobdHxIY3sP1lxQVAvEbliQUYnIfoM4QDkKoK5H3mRhMqUf8t0w8pgEdRGvM2cpciVL29z54uA9w"
+    }
+  },
+  "serverPort": 60549,
+  "proxy": "http://4477fcbc-0ef9-4181-a458-c2eaa4d20e0b:3g3gjZVQtXjWTYOo4g2CxiVJPdMQFgTS@tun.testsprite.com:8080"
+}

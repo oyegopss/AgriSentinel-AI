@@ -32,9 +32,21 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
 });
 
+import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
+
 export const metadata: Metadata = {
   title: "AgriSentinel AI | AI-Powered Smart Farming Intelligence",
   description: "AI-Powered Smart Farming Intelligence Platform — Crop disease detection, yield prediction, smart mandi recommendations.",
+  manifest: "/manifest.json",
+  themeColor: "#00FF9C",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "AgriSentinel AI",
+  },
+  icons: {
+    apple: "/icons/icon-192x192.png",
+  },
 };
 
 export default function RootLayout({
@@ -44,10 +56,33 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <script
+          type="text/javascript"
+          dangerouslySetInnerHTML={{
+            __html: `
+              function googleTranslateElementInit() {
+                new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'en,hi,mr', autoDisplay: false}, 'google_translate_element');
+              }
+            `,
+          }}
+        />
+        <script
+          type="text/javascript"
+          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+          async
+        ></script>
+      </head>
       <body
         className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} ${geistSans.variable} font-sans antialiased bg-[#0A0F1F] text-gray-200`}
       >
+        <div id="google_translate_element" className="hidden"></div>
         <AuthProvider>
+          <ServiceWorkerRegistration />
           <Navbar />
           <PageTransition>{children}</PageTransition>
           <Footer />
