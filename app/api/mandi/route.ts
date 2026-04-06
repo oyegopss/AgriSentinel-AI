@@ -21,18 +21,20 @@ export async function GET(request: NextRequest) {
       process.env.DATA_GOV_API_KEY ||
       process.env.NEXT_PUBLIC_DATA_GOV_API_KEY;
 
+    // Function to generate high-fidelity mock data for fallback
+    const getMockFallback = () => [
+      { market: "Lucknow", commodity: crop, modal_price: "2150", state: "Uttar Pradesh", district: "Lucknow" },
+      { market: "Kanpur", commodity: crop, modal_price: "2080", state: "Uttar Pradesh", district: "Kanpur" },
+      { market: "Varanasi", commodity: crop, modal_price: "2200", state: "Uttar Pradesh", district: "Varanasi" },
+      { market: "Agra", commodity: crop, modal_price: "2110", state: "Uttar Pradesh", district: "Agra" },
+      { market: "Bareilly", commodity: crop, modal_price: "2050", state: "Uttar Pradesh", district: "Bareilly" },
+    ];
+
     if (!apiKey) {
       console.warn("Mandi API key not configured. Using high-fidelity mock data for demo.");
-      
-      // High-fidelity fallback for Uttar Pradesh mandis
-      const mockRecords = [
-        { market: "Lucknow", commodity: crop, modal_price: "2150", state: "Uttar Pradesh", district: "Lucknow" },
-        { market: "Kanpur", commodity: crop, modal_price: "2080", state: "Uttar Pradesh", district: "Kanpur" },
-        { market: "Varanasi", commodity: crop, modal_price: "2200", state: "Uttar Pradesh", district: "Varanasi" },
-        { market: "Agra", commodity: crop, modal_price: "2110", state: "Uttar Pradesh", district: "Agra" },
-        { market: "Bareilly", commodity: crop, modal_price: "2050", state: "Uttar Pradesh", district: "Bareilly" },
-      ];
-      return NextResponse.json(mockRecords);
+      return NextResponse.json(getMockFallback(), {
+        headers: { "X-Data-Source": "demo-no-key" }
+      });
     }
 
     const params = new URLSearchParams({
@@ -43,36 +45,51 @@ export async function GET(request: NextRequest) {
       "filters[state]": state,
     });
 
-    const res = await fetch(`${DATA_GOV_BASE}?${params.toString()}`, {
-      method: "GET",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
+    try {
+      const res = await fetch(`${DATA_GOV_BASE}?${params.toString()}`, {
+        method: "GET",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
 
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("data.gov.in API error:", res.status, text?.slice(0, 200));
-      return NextResponse.json(
-        { error: "Government mandi API returned an error. Please try again later." },
-        { status: 502 }
-      );
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("data.gov.in API error:", res.status, text?.slice(0, 200));
+        console.warn("Falling back to mock data due to API error.");
+        return NextResponse.json(getMockFallback(), {
+          headers: { "X-Data-Source": "demo-api-error" }
+        });
+      }
+
+      const data = await res.json();
+      if (!data || typeof data !== "object" || !Array.isArray(data.records)) {
+        console.warn("Invalid data from mandi API. Falling back to mock data.");
+        return NextResponse.json(getMockFallback(), {
+          headers: { "X-Data-Source": "demo-invalid-data" }
+        });
+      }
+
+      // If no records found, also consider fallback for demo purposes
+      if (data.records.length === 0) {
+        console.info("No real records found for crop. Using mock data for demo.");
+        return NextResponse.json(getMockFallback(), {
+          headers: { "X-Data-Source": "demo-empty-results" }
+        });
+      }
+
+      return NextResponse.json(data.records, {
+        headers: { "X-Data-Source": "live-government-api" }
+      });
+    } catch (fetchErr) {
+      console.error("Network or parse error in Mandi API:", fetchErr);
+      return NextResponse.json(getMockFallback(), {
+        headers: { "X-Data-Source": "demo-network-error" }
+      });
     }
-
-    const data = await res.json();
-
-    if (!data || typeof data !== "object") {
-      return NextResponse.json(
-        { error: "Invalid response from mandi API." },
-        { status: 502 }
-      );
-    }
-
-    const records = Array.isArray(data.records) ? data.records : [];
-    return NextResponse.json(records);
   } catch (err) {
-    console.error("Mandi API route error:", err);
+    console.error("Mandi API route fatal error:", err);
     return NextResponse.json(
-      { error: "Failed to fetch mandi data. Please try again later." },
+      { error: "Failed to process mandi request. Please try again later." },
       { status: 500 }
     );
   }

@@ -72,7 +72,8 @@ export default function MandiIntelligencePage() {
     } catch (err) {
       console.error("Failed to fetch government mandi data:", err);
       setMarkets([]);
-      setError("Unable to fetch mandi data at the moment. Please try again.");
+      const msg = err instanceof Error ? err.message : "Unable to fetch mandi data at the moment. Please try again.";
+      setError(msg);
       setHasAnalyzed(true);
     } finally {
       setIsLoading(false);
