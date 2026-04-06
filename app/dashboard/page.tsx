@@ -58,6 +58,7 @@ import { DecisionScoreCard } from "@/app/components/DecisionScoreCard";
 import { ProfitSimulationCard } from "@/app/components/ProfitSimulationCard";
 import { SmartAlertsCard } from "@/app/components/SmartAlertsCard";
 import { BestMandiCard } from "@/app/components/BestMandiCard";
+import { fetchMandiPrices } from "@/lib/mandiApi";
 
 
 // ── Location Edit Modal ──────────────────────────────────────────────────────
@@ -241,10 +242,20 @@ export default function DashboardPage() {
         confidence: 0.95,
       };
 
-      const currentMandiPrices = [
-        { market: "Local Mandi", price: 2100 + (Math.floor(Math.random() * 20) - 10), distance_km: 15 },
-        { market: "Central Hub", price: 2250 + (Math.floor(Math.random() * 25) - 12), distance_km: 45 },
-      ];
+      const currentCrop = (profile?.crops && profile.crops[0]) || "Wheat";
+      const currentState = profile?.locationData?.state || "Uttar Pradesh";
+      const apiRecords = await fetchMandiPrices(currentCrop, currentState);
+      
+      const currentMandiPrices = apiRecords.length > 0 
+        ? apiRecords.slice(0, 5).map((r: any) => ({
+            market: r.market || "Unknown Mandi",
+            price: Number(r.modal_price) || 2100,
+            distance_km: Math.floor(Math.random() * 40) + 5 // Mock distance as API doesn't provide it
+          }))
+        : [
+            { market: "Lucknow (Mock)", price: 2150, distance_km: 15 },
+            { market: "Kanpur (Mock)", price: 2080, distance_km: 45 },
+          ];
 
       // ── 1. Disease Risk Signal ──────────────────────────────────────────────
       // DiseaseDetector.confidence is the model's raw prediction confidence (0–1).
@@ -298,13 +309,13 @@ export default function DashboardPage() {
       }
 
       // ── 4. Profit for each mandi ────────────────────────────────────────────
-      const profitsByMandi = currentMandiPrices.map((m) => ({
+      const profitsByMandi = currentMandiPrices.map((m: any) => ({
         market: m.market,
         price: m.price,
         netProfit: calculateProfit(yieldAmt, m.price, mappedSeverity).treatedProfit,
       }));
 
-      const bestMandi = profitsByMandi.reduce((prev, curr) =>
+      const bestMandi = profitsByMandi.reduce((prev: any, curr: any) =>
         curr.netProfit > prev.netProfit ? curr : prev
       );
       const profitInfo = calculateProfit(yieldAmt, bestMandi.price, mappedSeverity);

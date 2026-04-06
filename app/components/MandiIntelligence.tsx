@@ -14,6 +14,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { fetchMandiPrices } from "@/lib/mandiApi";
+import { useAuth } from "@/lib/AuthProvider";
 
 const CROPS = ["Wheat", "Rice", "Maize", "Cotton", "Sugarcane", "Mustard"];
 const TRANSPORT_RATE = 20; // ₹ per km
@@ -27,17 +28,24 @@ interface MandiData {
 }
 
 export const MandiIntelligence = () => {
+  const { profile } = useAuth();
   const [selectedCrop, setSelectedCrop] = useState("Wheat");
   const [mandiList, setMandiList] = useState<MandiData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (profile?.crops && profile.crops[0]) {
+      setSelectedCrop(profile.crops[0]);
+    }
+  }, [profile]);
+
   const loadMandiData = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch real data from api (mocked distance for demo)
-      const data = await fetchMandiPrices(selectedCrop);
+      const currentState = profile?.locationData?.state || "Uttar Pradesh";
+      const data = await fetchMandiPrices(selectedCrop, currentState);
       
       const refinedData: MandiData[] = data.map((item: any) => {
         const distance = Math.floor(Math.random() * 45) + 5; // 5-50km mock
