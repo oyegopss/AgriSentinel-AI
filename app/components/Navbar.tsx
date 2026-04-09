@@ -5,7 +5,7 @@
  * Auth-aware: shows Sign In CTA when logged out, user avatar + Sign Out when logged in.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,7 +37,12 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { user, profile, signOut, loading } = useAuth();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -118,7 +123,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          {loading ? (
+          {!mounted || loading ? (
             <div className="h-8 w-24 animate-pulse rounded-full bg-white/10" />
           ) : user ? (
             // Logged in: Pro badge + avatar + sign out
@@ -200,7 +205,9 @@ export default function Navbar() {
 
               {/* Mobile auth */}
               <div className="mt-3 border-t border-white/8 pt-3">
-                {user ? (
+                {!mounted || loading ? (
+                  <div className="h-12 w-full animate-pulse rounded-xl bg-white/10" />
+                ) : user ? (
                   <div className="space-y-2">
                     <Link
                       href="/profile"

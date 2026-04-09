@@ -41,6 +41,7 @@ import { SatelliteVisionCard } from "@/app/components/SatelliteVisionCard";
 import { SoilHealthCard } from "@/app/components/SoilHealthCard";
 import { FinTechCard } from "@/app/components/FinTechCard";
 import { FarmHistory } from "@/app/components/FarmHistory";
+import { SowingAdvisorCard } from "@/app/components/SowingAdvisorCard";
 
 import { MandiIntelligence } from "@/app/components/MandiIntelligence";
 import { DecisionEngine } from "@/app/components/DecisionEngine";
@@ -59,6 +60,7 @@ import { ProfitSimulationCard } from "@/app/components/ProfitSimulationCard";
 import { SmartAlertsCard } from "@/app/components/SmartAlertsCard";
 import { BestMandiCard } from "@/app/components/BestMandiCard";
 import { fetchMandiPrices } from "@/lib/mandiApi";
+import { LiveTicker } from "@/app/components/LiveTicker";
 
 
 // ── Location Edit Modal ──────────────────────────────────────────────────────
@@ -455,7 +457,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-32 sm:px-6 lg:px-8 space-y-10">
 
         {/* PREDICTIVE AI BANNER (Pitch Addition) */}
         {weather && (
@@ -580,22 +582,92 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="space-y-4 pt-6 border-t border-white/5">
-                <div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-                    <span>Humidity</span>
-                    <span className="text-white">{weather?.humidity}%</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                      <span>Humidity</span>
+                      <span className="text-white">{weather?.humidity}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#00C3FF]" style={{ width: `${weather?.humidity}%` }} />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#00C3FF]" style={{ width: `${weather?.humidity}%` }} />
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                      <span>Cloud Cover</span>
+                      <span className="text-white">{weather?.cloudCover}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-400" style={{ width: `${weather?.cloudCover || 0}%` }} />
+                    </div>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                      <span>Wind</span>
+                      <span className="text-white">{weather?.windSpeed} m/s</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                      <span>Visibility</span>
+                      <span className="text-white">{weather?.visibility} km</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                      <span>Dew Point</span>
+                      <span className="text-white">{weather?.dewPoint}°C</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                      <span>Air Quality (AQI)</span>
+                      <span className="text-white">{weather?.airQuality} 
+                        <span className="text-gray-600 text-[8px] ml-1">/ 5</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5 mt-2">
                     <span>Precipitation Level</span>
                     <span className="text-white">{(weather?.rain || 0).toFixed(1)} mm</span>
                   </div>
                   <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                     <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (weather?.rain || 0) * 5)}%` }} />
+                  </div>
+                </div>
+
+                {/* 5-Day Forecast Row */}
+                <div className="pt-6 border-t border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Calendar className="h-3 w-3 text-[#00FF9C]/70" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#00FF9C]/70">5-Day Forecast</p>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {weather?.forecast?.map((day, idx) => (
+                      <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-white/[0.03] border border-white/5 transition-colors hover:bg-white/[0.06]">
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-gray-500">{day.date}</span>
+                        <div className="h-6 w-6 flex items-center justify-center">
+                          <img 
+                            src={`https://openweathermap.org/img/wn/${day.icon}@2x.png`} 
+                            alt={day.description}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-[10px] font-black text-white">{day.temp}°</span>
+                          <span className="text-[7px] font-bold text-[#00C3FF]">{day.humidity}%</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -616,10 +688,11 @@ export default function DashboardPage() {
               Intelligence Module: Advanced Integrations
             </h3>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
              <SatelliteVisionCard />
              <SoilHealthCard />
              <FinTechCard />
+             <SowingAdvisorCard />
           </div>
         </div>
 
@@ -671,31 +744,8 @@ export default function DashboardPage() {
            <MandiIntelligence />
         </div>
 
-        {/* Floating Price Ticker Simulation */}
-        <div className="fixed bottom-0 left-0 right-0 z-[100] border-t border-white/5 bg-[#050505]/90 backdrop-blur-xl py-2 px-6">
-           <div className="flex items-center gap-10 overflow-hidden whitespace-nowrap">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase text-[9px] tracking-widest shrink-0">
-                 <Activity className="h-3 w-3" />
-                 Live Market Feed:
-              </div>
-              <div className="flex items-center gap-8 animate-marquee">
-                 {[
-                   { crop: "Wheat", price: "₹2,245", trend: "+1.2%" },
-                   { crop: "Rice (Basmati)", price: "₹2,840", trend: "+0.8%" },
-                   { crop: "Potato", price: "₹1,450", trend: "-2.1%" },
-                   { crop: "Tomato", price: "₹1,820", trend: "+12.4%" },
-                   { crop: "Onion", price: "₹2,100", trend: "-1.5%" },
-                   { crop: "Chilli", price: "₹3,400", trend: "+4.2%" },
-                 ].map((t, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                       <span className="text-gray-400 uppercase font-black tracking-tighter text-[10px]">{t.crop}</span>
-                       <span className="text-white font-mono text-[10px]">{t.price}</span>
-                       <span className={t.trend.startsWith('+') ? "text-emerald-500 text-[8px]" : "text-red-500 text-[8px]"}>{t.trend}</span>
-                    </div>
-                 ))}
-              </div>
-           </div>
-        </div>
+        {/* Floating Price Ticker real data implementation */}
+        <LiveTicker />
 
         {/* The Hero: Final Decision */}
         <div className="pt-10">

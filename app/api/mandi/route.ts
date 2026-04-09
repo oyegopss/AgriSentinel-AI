@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const crop = searchParams.get("crop")?.trim() || "Wheat";
     const state = searchParams.get("state")?.trim() || "Uttar Pradesh";
+    const date = searchParams.get("date")?.trim();
 
     const apiKey =
       process.env.DATA_GOV_API_KEY ||
@@ -40,10 +41,14 @@ export async function GET(request: NextRequest) {
     const params = new URLSearchParams({
       "api-key": apiKey,
       format: "json",
-      limit: "20",
+      limit: "50",
       "filters[commodity]": crop,
       "filters[state]": state,
     });
+
+    if (date) {
+      params.append("filters[arrival_date]", date);
+    }
 
     try {
       const res = await fetch(`${DATA_GOV_BASE}?${params.toString()}`, {

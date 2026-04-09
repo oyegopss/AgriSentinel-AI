@@ -122,7 +122,7 @@ export const BestMandiCard = ({
             const isBest = m.market === bestMandi?.market;
             return (
               <div
-                key={m.market}
+                key={`${m.market}-${i}`}
                 className={`flex items-center justify-between rounded-lg px-3 py-2 transition-colors ${
                   isBest
                     ? "border border-white/[0.06] bg-white/[0.03]"
