@@ -3,7 +3,7 @@
  * - Purpose: Root layout for the root-level demo app (fonts + global wrappers).
  */
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Orbitron, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
@@ -38,7 +38,6 @@ export const metadata: Metadata = {
   title: "AgriSentinel AI | AI-Powered Smart Farming Intelligence",
   description: "AI-Powered Smart Farming Intelligence Platform — Crop disease detection, yield prediction, smart mandi recommendations.",
   manifest: "/manifest.json",
-  themeColor: "#00FF9C",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -47,6 +46,13 @@ export const metadata: Metadata = {
   icons: {
     apple: "/icons/icon-192x192.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#00FF9C",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
