@@ -60,7 +60,10 @@ import { ProfitSimulationCard } from "@/app/components/ProfitSimulationCard";
 import { SmartAlertsCard } from "@/app/components/SmartAlertsCard";
 import { BestMandiCard } from "@/app/components/BestMandiCard";
 import { fetchMandiPrices } from "@/lib/mandiApi";
+import { estimateMandiDistance } from "@/lib/mandiDistance";
 import { LiveTicker } from "@/app/components/LiveTicker";
+import { TreatmentPlanCard } from "@/app/components/TreatmentPlanCard";
+import { PestRiskCard } from "@/app/components/PestRiskCard";
 
 
 // ── Location Edit Modal ──────────────────────────────────────────────────────
@@ -248,16 +251,26 @@ export default function DashboardPage() {
       const currentState = profile?.locationData?.state || "Uttar Pradesh";
       const apiRecords = await fetchMandiPrices(currentCrop, currentState);
       
+      const farmerLat = profile?.locationData?.lat || 26.8467;
+      const farmerLon = profile?.locationData?.lon || 80.9462;
+
       const currentMandiPrices = apiRecords.length > 0 
-        ? apiRecords.slice(0, 5).map((r: any) => ({
-            market: r.market || "Unknown Mandi",
-            price: Number(r.modal_price) || 2100,
-            distance_km: Math.floor(Math.random() * 40) + 5 // Mock distance as API doesn't provide it
-          }))
+        ? apiRecords.slice(0, 8).map((r: any) => {
+            const { km } = estimateMandiDistance(r.market || "", farmerLat, farmerLon);
+            return {
+              market: r.market || "Unknown Mandi",
+              price: Number(r.modal_price) || 2100,
+              distance_km: km
+            };
+          })
         : [
-            { market: "Lucknow (Mock)", price: 2150, distance_km: 15 },
-            { market: "Kanpur (Mock)", price: 2080, distance_km: 45 },
+            { market: "Lucknow", price: 2150, distance_km: 15 },
+            { market: "Kanpur", price: 2080, distance_km: 45 },
+            { market: "Varanasi", price: 2210, distance_km: 120 },
+            { market: "Agra", price: 2120, distance_km: 80 },
           ];
+
+      const TRANSPORT_RATE = 20; // ₹ per km (matches MandiIntelligence)
 
       // ── 1. Disease Risk Signal ──────────────────────────────────────────────
       // DiseaseDetector.confidence is the model's raw prediction confidence (0–1).
@@ -310,17 +323,24 @@ export default function DashboardPage() {
         mappedSeverity = "Critical";
       }
 
-      // ── 4. Profit for each mandi ────────────────────────────────────────────
-      const profitsByMandi = currentMandiPrices.map((m: any) => ({
-        market: m.market,
-        price: m.price,
-        netProfit: calculateProfit(yieldAmt, m.price, mappedSeverity).treatedProfit,
-      }));
+      // ── 4. Profit for each mandi (Price - Transport) ────────────────────────
+      const profitsByMandi = currentMandiPrices.map((m: any) => {
+        const profitEngineRes = calculateProfit(yieldAmt, m.price, mappedSeverity);
+        const transportCost = m.distance_km * TRANSPORT_RATE;
+        return {
+          market: m.market,
+          price: m.price,
+          distance_km: m.distance_km,
+          netProfit: profitEngineRes.treatedProfit - transportCost,
+        };
+      });
 
       const bestMandi = profitsByMandi.reduce((prev: any, curr: any) =>
         curr.netProfit > prev.netProfit ? curr : prev
-      );
+      , profitsByMandi[0]);
+
       const profitInfo = calculateProfit(yieldAmt, bestMandi.price, mappedSeverity);
+      const bestTransportCost = bestMandi.distance_km * TRANSPORT_RATE;
 
       // ── 5. Smart Alerts ─────────────────────────────────────────────────────
       const generatedAlerts = generateWeatherAlerts(
@@ -334,8 +354,8 @@ export default function DashboardPage() {
         score,
         risk: riskLevel,
         recommendation,
-        profitIfTreated: profitInfo.treatedProfit,
-        profitIfIgnored: profitInfo.untreatedProfit,
+        profitIfTreated: profitInfo.treatedProfit - bestTransportCost,
+        profitIfIgnored: profitInfo.untreatedProfit - bestTransportCost,
         loss: profitInfo.lossDifference,
         alerts: generatedAlerts,
         allMandis: profitsByMandi,
@@ -496,13 +516,13 @@ export default function DashboardPage() {
                <div className="relative flex h-14 w-14 items-center justify-center">
                  <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
                     <path className="text-white/5" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="text-emerald-400 transition-all duration-1000 ease-out" strokeDasharray="72, 100" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path className="text-emerald-400 transition-all duration-1000 ease-out" strokeDasharray={`${weather?.suitabilityScore ?? 72}, 100`} strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                  </svg>
-                 <span className="text-[15px] font-black text-white">72</span>
+                 <span className="text-[15px] font-black text-white">{weather?.suitabilityScore ?? 72}</span>
                </div>
                <div>
                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">Crop Health Index</p>
-                 <p className="text-xl font-black text-white">72<span className="text-sm font-medium text-gray-500">/100</span></p>
+                 <p className="text-xl font-black text-white">{weather?.suitabilityScore ?? 72}<span className="text-sm font-medium text-gray-500">/100</span></p>
                </div>
              </div>
              
@@ -522,7 +542,11 @@ export default function DashboardPage() {
                </div>
                <div>
                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#00FF9C]/70">Profit Potential</p>
-                 <p className="text-xl font-bold text-[#00FF9C] font-mono tracking-tight">₹18,000</p>
+                 <p className="text-xl font-bold text-[#00FF9C] font-mono tracking-tight">
+                   {decisionPayload.extendedData?.profitIfTreated
+                     ? `₹${decisionPayload.extendedData.profitIfTreated.toLocaleString()}`
+                     : "Computing..."}
+                 </p>
                </div>
              </div>
           </motion.div>
@@ -678,6 +702,31 @@ export default function DashboardPage() {
         {/* Step 2: Disease Upload */}
         <DiseaseDetector onResult={handleDiseaseResult} weather={weather} profile={profile} />
 
+        {/* Intelligence Module 01.6: Treatment Plan + Pest Risk */}
+        <div id="treatment-section" className="space-y-4 pt-2">
+          <div className="flex items-center gap-3 px-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+              <span className="text-violet-400 font-black text-xs">🧪</span>
+            </div>
+            <h3 className="font-display text-[10px] font-bold text-white uppercase tracking-widest">
+              Intelligence Module: Treatment &amp; Pest Analysis
+            </h3>
+          </div>
+          <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${diseaseResult && !diseaseResult.disease.includes('Healthy') ? 'ring-2 ring-violet-500/50 rounded-[2rem] p-2 bg-violet-500/5 animate-pulse-subtle' : ''}`}>
+            <TreatmentPlanCard
+              diseaseResult={diseaseResult}
+              cropType={(profile?.crops && profile.crops[0]) || "Wheat"}
+              loading={decisionPayload.loading}
+            />
+            <PestRiskCard
+              cropType={(profile?.crops && profile.crops[0]) || "Wheat"}
+              weather={weather}
+              diseaseResult={diseaseResult}
+              loading={decisionPayload.loading}
+            />
+          </div>
+        </div>
+
         {/* Intelligence Module 01.5: Deep Tech Integrations (Pitch Features) */}
         <div className="space-y-4 pt-4">
           <div className="flex items-center gap-3 px-2">
@@ -689,8 +738,8 @@ export default function DashboardPage() {
             </h3>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-             <SatelliteVisionCard />
-             <SoilHealthCard />
+             <SatelliteVisionCard weather={weather} />
+             <SoilHealthCard crop={(profile?.crops && profile.crops[0]) || "Wheat"} />
              <FinTechCard />
              <SowingAdvisorCard />
           </div>

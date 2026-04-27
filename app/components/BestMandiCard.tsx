@@ -105,10 +105,18 @@ export const BestMandiCard = ({
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-center py-8 text-center">
-          <p className="text-[11px] text-gray-600 font-bold uppercase tracking-widest">
-            Awaiting disease analysis…
-          </p>
+        <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center animate-pulse">
+            <Store className="h-5 w-5 text-gray-600" />
+          </div>
+          <div>
+            <p className="text-[11px] text-gray-500 font-black uppercase tracking-widest">
+              Synchronizing Markets...
+            </p>
+            <p className="text-[9px] text-gray-700 mt-1 uppercase tracking-widest font-bold">
+              Fetching localized Agmarknet data
+            </p>
+          </div>
         </div>
       )}
 

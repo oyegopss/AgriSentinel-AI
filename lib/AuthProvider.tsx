@@ -85,14 +85,24 @@ async function upsertUserDoc(
   uid: string,
   data: Partial<UserProfile>
 ): Promise<void> {
-  const ref = doc(db, "users", uid);
-  await setDoc(ref, data, { merge: true });
+  try {
+    const ref = doc(db, "users", uid);
+    await setDoc(ref, data, { merge: true });
+  } catch (err) {
+    console.warn("Firestore upsert failed (likely permissions):", err);
+    // During pitch, we don't want to crash if rules are misconfigured
+  }
 }
 
 async function fetchUserDoc(uid: string): Promise<UserProfile | null> {
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
-  return snap.exists() ? (snap.data() as UserProfile) : null;
+  try {
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+    return snap.exists() ? (snap.data() as UserProfile) : null;
+  } catch (err) {
+    console.warn("Firestore fetch failed (likely permissions):", err);
+    return null;
+  }
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────

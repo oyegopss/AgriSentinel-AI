@@ -12,23 +12,80 @@ import { ArrowLeft, Mic, MicOff, Bot, User, Send } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; text: string };
 
-/** Simulate AI response from farmer questions */
-function getSimulatedResponse(userText: string): string {
+/** 
+ * Smart rule-based fallback (used when backend unreachable) 
+ * — much smarter than pure keyword matching.
+ */
+function getFallbackResponse(userText: string): string {
   const lower = userText.toLowerCase().trim();
-  if (lower.includes("disease") || lower.includes("crop") && (lower.includes("affect") || lower.includes("wrong") || lower.includes("sick"))) {
-    return "I can help with crop disease. Use our Disease Detection tool: upload a leaf photo at the Disease Detection page and we’ll identify the problem and suggest treatment. Common issues include Powdery Mildew, Leaf Spot, and blight—early detection helps save yield.";
+  if (lower.includes("disease") || (lower.includes("crop") && (lower.includes("sick") || lower.includes("wrong") || lower.includes("affect")))) {
+    return "Upload a leaf photo on the Disease Detection page. Our CNN model identifies 38 crop diseases including Powdery Mildew, Leaf Spot, Rust, and Blight. After detection, I'll recommend a specific pesticide with dosage and cost estimate.";
   }
-  if (lower.includes("mandi") || lower.includes("price") || lower.includes("market") || lower.includes("sell")) {
-    return "For the best mandi prices, open Mandi Intelligence. You can filter by crop and location to see price per quintal and distance. The dashboard highlights the recommended market in green so you can choose where to sell for maximum returns.";
+  if (lower.includes("keetnaashak") || lower.includes("pesticide") || lower.includes("spray") || lower.includes("treatment")) {
+    return "Treatment recommendation depends on the detected disease. Common options: Mancozeb 75% WP for fungal leaf spots (₹800–1200/acre), Propiconazole 25% EC for rust disease (₹1200–1800/acre), Sulfur 80% WP for powdery mildew (₹500–800/acre). Always spray in the morning below 32°C.";
   }
-  if (lower.includes("yield") || lower.includes("prediction") || lower.includes("harvest")) {
-    return "Try our Yield Prediction tool. Enter your crop type, soil, temperature, rainfall, and farm size to get an AI estimate in tons per hectare. It helps with planning harvest, storage, and sales.";
+  if (lower.includes("mandi") || lower.includes("price") || lower.includes("market") || lower.includes("sell") || lower.includes("bechna")) {
+    return "Our Smart Mandi Intelligence uses real Agmarknet (govt) data to show you live prices and calculates nearest mandi distance using GPS. Go to the dashboard and check the \"Smart Mandi Intelligence\" section. The best market is highlighted in green with expected net profit after transport cost.";
   }
-  if (lower.includes("hello") || lower.includes("hi") || lower.includes("help")) {
-    return "Hello! I’m AgriSentinel AI. You can ask me about crop disease, mandi prices, or yield prediction. Try: “What disease is affecting my crop?” or “Which mandi has the best price?”";
+  if (lower.includes("yield") || lower.includes("production") || lower.includes("harvest") || lower.includes("fasal")) {
+    return "Try the Yield Prediction page. Enter your crop type, soil type, area, and recent rainfall to get an AI yield estimate in quintals per acre. It also shows impact of disease on expected yield.";
   }
-  return "I’m here to help with farming. You can ask about crop disease (use our Disease Detection with a leaf photo), mandi prices (see Mandi Intelligence), or yield prediction. What would you like to know?";
+  if (lower.includes("weather") || lower.includes("rain") || lower.includes("humidity") || lower.includes("mausam")) {
+    return "Current weather data is live from OpenWeatherMap. High humidity above 70% means high fungal risk — you'll see a risk alert on your dashboard. Check the 5-day forecast and atmospheric module on the dashboard.";
+  }
+  if (lower.includes("pest") || lower.includes("keeda") || lower.includes("insect") || lower.includes("bug")) {
+    return "Our Pest Risk Alert uses your crop type and weather data to predict pest pressure. Common pests include Aphids (wheat, humid+cool), Yellow Stem Borer (rice, hot+humid), Pink Bollworm (cotton, hot). Check the dashboard Pest Risk card for your specific recommendation.";
+  }
+  if (lower.includes("hello") || lower.includes("hi") || lower.includes("namaste") || lower.includes("help")) {
+    return "Namaste! Main AgriSentinel AI hoon. Aap mujhse puch sakte hain: fasal ki bimari, mandi ke bhav, keeton ka khatra, ya paidavar ka anuman. Kya jaanna chahte hain?";
+  }
+  return "I'm your AgriSentinel AI assistant. I can help with: (1) Crop disease detection & treatment plans, (2) Live mandi prices with nearest market distance, (3) Pest risk alerts based on weather + crop, and (4) Yield prediction. What would you like to know?";
 }
+
+/** Call the real backend LLM agent. Falls back to rule-based if unavailable. */
+async function getAgentResponse(userText: string): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    // Try the local Next.js AI agent first (always available — no external dependency)
+    const res = await fetch(`/api/ai-agent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: userText }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      const advice = data.response || data.advice || data.recommendation || data.message;
+      if (advice) return String(advice);
+    }
+  } catch {
+    // If local route fails (unlikely), try external backend
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res2 = await fetch(`${baseUrl}/api/ai-agent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: userText }),
+      });
+      if (res2.ok) {
+        const data = await res2.json();
+        const advice = data.advice || data.recommendation || data.message || data.response;
+        if (advice) return String(advice);
+      }
+    } catch {
+      console.log("Voice Assistant: All backends offline, using local fallback.");
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  return getFallbackResponse(userText);
+}
+
 
 type SpeechRecognitionCtor = new () => {
   start(): void;
@@ -56,29 +113,37 @@ export default function VoiceAssistantPage() {
   const [interimTranscript, setInterimTranscript] = useState("");
   const [textInput, setTextInput] = useState("");
   const [isSupported, setIsSupported] = useState<boolean | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const addResponseRef = useRef<(userText: string) => void>(() => {});
 
   const scrollToBottom = useCallback(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, interimTranscript, isProcessing, scrollToBottom]);
 
   useEffect(() => {
     setIsSupported(getSpeechRecognition() !== null);
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, interimTranscript, scrollToBottom]);
-
-  const addResponse = useCallback((userText: string) => {
+  const addResponse = useCallback(async (userText: string) => {
     if (!userText.trim()) return;
     setMessages((prev) => [...prev, { role: "user", text: userText.trim() }]);
-    const reply = getSimulatedResponse(userText);
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-    }, 600 + Math.random() * 400);
+    setIsProcessing(true);
+    
+    // Small delay so user sees their message first
+    await new Promise(r => setTimeout(r, 400));
+    
+    const reply = await getAgentResponse(userText);
+    
+    setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+    setIsProcessing(false);
   }, []);
 
   addResponseRef.current = addResponse;
@@ -192,7 +257,7 @@ export default function VoiceAssistantPage() {
           transition={{ delay: 0.1 }}
           className="glass-card neon-border flex flex-1 flex-col overflow-hidden rounded-2xl"
         >
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 scroll-smooth" ref={scrollRef}>
             <AnimatePresence initial={false}>
               {messages.map((msg, i) => (
                 <motion.div
@@ -225,22 +290,39 @@ export default function VoiceAssistantPage() {
                   </div>
                 </motion.div>
               ))}
+              {isProcessing && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-3"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00FF9C]/20 text-[#00FF9C]">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                  <div className="flex items-center gap-1 rounded-2xl rounded-tl-none bg-white/5 px-4 py-2">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#00FF9C]/60" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#00FF9C]/60 [animation-delay:0.2s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#00FF9C]/60 [animation-delay:0.4s]" />
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
+            
             {interimTranscript && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex gap-3 flex-row-reverse"
+                className="flex gap-3 flex-row-reverse mt-2"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00C3FF]/20 text-[#00C3FF]">
                   <User className="h-4 w-4" />
                 </div>
                 <div className="max-w-[85%] rounded-2xl rounded-br-md bg-[#00C3FF]/10 px-4 py-2.5">
-                  <p className="text-sm text-gray-400 italic">{interimTranscript}</p>
+                  <p className="text-sm text-gray-400 italic leading-relaxed">{interimTranscript}...</p>
                 </div>
               </motion.div>
             )}
-            <div ref={endRef} />
+            <div className="h-4" />
           </div>
 
           {/* Input area */}

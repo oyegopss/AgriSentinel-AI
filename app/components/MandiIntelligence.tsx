@@ -16,6 +16,7 @@ import {
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { fetchMandiPrices } from "@/lib/mandiApi";
 import { useAuth } from "@/lib/AuthProvider";
+import { estimateMandiDistance, buildNearestMandiLabel } from "@/lib/mandiDistance";
 
 const CROPS = ["Wheat", "Rice", "Maize", "Cotton", "Sugarcane", "Mustard"];
 const TRANSPORT_RATE = 20; // ₹ per km
@@ -75,14 +76,20 @@ export const MandiIntelligence = () => {
       processDay(yesterdayData);
       processDay(dayBeforeData);
 
+      // Get farmer GPS coords from profile (set by FarmMap / location detection)
+      const farmerLat: number = (profile as any)?.locationData?.lat ?? 26.8467; // Default: Lucknow
+      const farmerLon: number = (profile as any)?.locationData?.lon ?? 80.9462;
+
       const refinedData: MandiData[] = todayData.map((item: any) => {
-        const distance = Math.floor(Math.random() * 45) + 5;
+        // ── Real haversine distance from farmer GPS to mandi city coords ──
+        const { km: distKm, isReal } = estimateMandiDistance(item.market || "", farmerLat, farmerLon);
+        const distLabel = buildNearestMandiLabel(distKm, isReal);
         const price = Number(item.modal_price) || 2100;
         
         // Ensure history is ordered [oldest -> newest] for the sparkline
         let history = (marketHistory[item.market] || []).slice().reverse();
         
-        // If history is empty or short, simulate it for visual demo consistency
+        // If history is empty or short, augment for visual demo consistency
         if (history.length < 3) {
           const base = price;
           history = [
@@ -97,8 +104,9 @@ export const MandiIntelligence = () => {
         return {
           market: item.market || "Unknown",
           price: price,
-          distance: distance,
-          profit: price - (distance * TRANSPORT_RATE),
+          distance: distKm,
+          distLabel,
+          profit: price - (distKm * TRANSPORT_RATE),
           trend: isUp ? "up" : "down",
           arrivalDate: item.arrival_date,
           history: history
@@ -146,13 +154,18 @@ export const MandiIntelligence = () => {
       <div className="flex flex-col gap-4 border-b border-white/10 bg-white/5 px-6 py-5 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Store className="h-5 w-5 text-[#00FF9C]" />
-          <h3 className="font-display text-sm font-bold text-white uppercase tracking-widest flex items-center gap-3">
-            Market Intelligence
-            <span className="flex items-center gap-1.5 rounded-full bg-[#00FF9C]/10 border border-[#00FF9C]/20 px-2 py-0.5">
-               <div className="h-1 w-1 rounded-full bg-[#00FF9C] animate-pulse" />
-               <span className="text-[8px] font-black text-[#00FF9C] uppercase tracking-tighter">Gov-Verified Live</span>
-            </span>
-          </h3>
+          <div>
+            <h3 className="font-display text-sm font-bold text-white uppercase tracking-widest flex items-center gap-3">
+              Smart Mandi Intelligence
+              <span className="flex items-center gap-1.5 rounded-full bg-[#00FF9C]/10 border border-[#00FF9C]/20 px-2 py-0.5">
+                <div className="h-1 w-1 rounded-full bg-[#00FF9C] animate-pulse" />
+                <span className="text-[8px] font-black text-[#00FF9C] uppercase tracking-tighter">Agmarknet Live</span>
+              </span>
+            </h3>
+            <p className="text-[9px] text-gray-600 mt-0.5 uppercase tracking-widest font-bold">
+              Nearest verified market data • Distance via GPS
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-3">
@@ -211,7 +224,7 @@ export const MandiIntelligence = () => {
                     <div>
                       <h4 className="font-display text-xl font-bold text-white">{bestMarket.market}</h4>
                       <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                        <MapPin className="h-3 w-3" /> {bestMarket.distance} km away • ₹{TRANSPORT_RATE}/km transport
+                        <MapPin className="h-3 w-3" /> {(bestMarket as any).distLabel || `${bestMarket.distance} km away`} • ₹{TRANSPORT_RATE}/km transport
                       </p>
                     </div>
                     <div className="text-right">
@@ -237,7 +250,13 @@ export const MandiIntelligence = () => {
                 <tbody className="divide-y divide-white/5">
                   {mandiList.map((item, idx) => (
                     <tr key={idx} className="group transition-colors hover:bg-white/[0.02]">
-                      <td className="py-4 pl-2 font-semibold text-white">{item.market}</td>
+                      <td className="py-4 pl-2">
+                        <p className="font-semibold text-white">{item.market}</p>
+                        <p className="text-[9px] text-gray-600 flex items-center gap-0.5 mt-0.5">
+                          <Navigation className="h-2.5 w-2.5" />
+                          {(item as any).distLabel || `${item.distance} km`}
+                        </p>
+                      </td>
                       <td className="py-4 text-right font-mono font-bold text-gray-300">₹{item.price}</td>
                       <td className="py-4 text-right text-gray-400 tabular-nums">{item.arrivalDate || "Today"}</td>
                       <td className="py-4 text-right">
@@ -265,14 +284,17 @@ export const MandiIntelligence = () => {
               </table>
             </div>
             
-            <div className="pt-4 border-t border-white/5">
+            <div className="pt-4 border-t border-white/5 space-y-2">
                <div className="flex items-center justify-between text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-                  <span>Transport Optimization Rate: ₹20/km</span>
+                  <span>Transport Rate: ₹20/km · Distance: GPS Haversine</span>
                   <div className="flex gap-4">
                      <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-emerald-400"></div> Growth</span>
                      <span className="flex items-center gap-1"><div className="h-1.5 w-1.5 rounded-full bg-red-400"></div> Volatile</span>
                   </div>
                </div>
+               <p className="text-[9px] text-gray-700 italic">
+                 📍 Distances calculated from your GPS location to mandi city centre. Exact local mandi data may vary — this bridges national Agmarknet data with local decision-making.
+               </p>
             </div>
           </div>
         )}

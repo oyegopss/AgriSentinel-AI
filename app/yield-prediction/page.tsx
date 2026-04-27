@@ -5,20 +5,22 @@
  * - Purpose: Yield prediction screen (baseline vs adjusted) and context wiring.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
-  BarChart3,
   Thermometer,
   Droplets,
   Ruler,
   Wheat,
   Layers,
   TrendingUp,
+  CheckCircle2,
 } from "lucide-react";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useAuth } from "@/lib/AuthProvider";
+import { fetchWeather } from "@/lib/weatherApi";
 
 const CROP_OPTIONS = ["Wheat", "Rice", "Maize", "Sugarcane", "Cotton"] as const;
 const SOIL_OPTIONS = ["Loamy", "Clay", "Sandy", "Black Soil"] as const;
@@ -81,6 +83,7 @@ function mockPredictYield(params: {
 }
 
 export default function YieldPredictionPage() {
+  const { profile } = useAuth();
   const [crop, setCrop] = useState<string>(CROP_OPTIONS[0]);
   const [soil, setSoil] = useState<string>(SOIL_OPTIONS[0]);
   const [temperature, setTemperature] = useState<string>("28");
@@ -88,6 +91,43 @@ export default function YieldPredictionPage() {
   const [farmSize, setFarmSize] = useState<string>("10");
   const [isPredicting, setIsPredicting] = useState(false);
   const [result, setResult] = useState<ReturnType<typeof mockPredictYield> | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Auto-populate from farmer profile + live weather
+  useEffect(() => {
+    let cancelled = false;
+    const populate = async () => {
+      // 1. Crop from profile
+      if (profile?.crops && profile.crops[0]) {
+        const profileCrop = CROP_OPTIONS.find(c =>
+          c.toLowerCase() === (profile.crops![0] || "").toLowerCase()
+        );
+        if (profileCrop) setCrop(profileCrop);
+      }
+
+      // 2. Farm size from profile (convert acres → hectares)
+      if (profile?.farmArea) {
+        setFarmSize(String(Math.round((profile.farmArea * 0.4047) * 10) / 10));
+      }
+
+      // 3. Live weather for temperature & rainfall estimate
+      try {
+        const city = profile?.locationData?.city || profile?.location || "Lucknow";
+        const w = await fetchWeather(city);
+        if (!cancelled && w?.temp) {
+          setTemperature(String(Math.round(w.temp)));
+          // Estimate rainfall from humidity/rain for the ML formula
+          const estRainfall = Math.round(w.humidity * 10 + (w.rain || 0) * 50);
+          setRainfall(String(Math.min(2000, Math.max(400, estRainfall))));
+          setPrefilled(true);
+        }
+      } catch (err) {
+        console.error("Yield Pre-fill: Weather fetch failed", err);
+      }
+    };
+    if (profile) populate();
+    return () => { cancelled = true; };
+  }, [profile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +190,20 @@ export default function YieldPredictionPage() {
           className="glass-card neon-border rounded-2xl p-6 transition-all duration-300 sm:p-8"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Pre-fill notice */}
+            {prefilled && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 rounded-xl border border-[#00FF9C]/20 bg-[#00FF9C]/5 px-4 py-2.5"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#00FF9C] shrink-0" />
+                <p className="text-[11px] font-bold text-[#00FF9C]">
+                  Pre-filled from your farm profile & live weather
+                  <span className="font-normal text-gray-400 ml-1">— adjust if needed.</span>
+                </p>
+              </motion.div>
+            )}
             <div>
               <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-400">
                 <Wheat className="h-4 w-4 text-[#00FF9C]" />

@@ -4,36 +4,63 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Satellite, Scan, Cpu } from "lucide-react";
 
-export const SatelliteVisionCard = () => {
+interface SatelliteVisionCardProps {
+  weather?: {
+    humidity?: number;
+    rain?: number;
+    temp?: number;
+    description?: string;
+  } | null;
+}
+
+export const SatelliteVisionCard = ({ weather }: SatelliteVisionCardProps) => {
   const [syncing, setSyncing] = useState(true);
   const [liveNDVI, setLiveNDVI] = useState(0.72);
   const [liveMoisture, setLiveMoisture] = useState(45);
 
+  // Derive weather-based starting values once weather loads
   useEffect(() => {
     const timer = setTimeout(() => {
       setSyncing(false);
-    }, 4500);
-    return () => clearTimeout(timer);
-  }, []);
 
+      const humidity = weather?.humidity ?? 55;
+      const rain = weather?.rain ?? 0;
+      const temp = weather?.temp ?? 28;
+
+      // Moisture: Wire specifically to humidity / 2 as per pitch request
+      const baseMoisture = Math.round(humidity / 2);
+      setLiveMoisture(Math.min(85, Math.max(20, baseMoisture)));
+
+      // NDVI: high heat + drought stress → lower NDVI
+      // Overcast/rainy → slightly lower NDVI (less photosynthesis)
+      let baseNDVI = 0.78;
+      if (temp > 36) baseNDVI -= 0.12; // heat stress
+      if (humidity < 35) baseNDVI -= 0.08; // drought stress
+      if (rain > 10) baseNDVI -= 0.04; // cloud/waterlogging
+      if (humidity > 70 && temp < 33) baseNDVI += 0.05; // good growing conditions
+      setLiveNDVI(Math.min(0.92, Math.max(0.55, Number(baseNDVI.toFixed(2)))));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [weather]);
+
+  // Small natural fluctuation after init
   useEffect(() => {
     if (syncing) return;
     const interval = setInterval(() => {
-       setLiveNDVI(prev => {
-          let np = prev + (Math.random() * 0.04 - 0.02);
-          if (np > 0.9) np = 0.9;
-          if (np < 0.6) np = 0.6;
-          return Number(np.toFixed(2));
-       });
-       setLiveMoisture(prev => {
-          let nm = prev + (Math.floor(Math.random() * 5) - 2);
-          if (nm > 60) nm = 60;
-          if (nm < 30) nm = 30;
-          return nm;
-       });
-    }, 3500);
+      setLiveNDVI(prev => {
+        let np = prev + (Math.random() * 0.02 - 0.01); // tiny ±0.01 swing
+        return Number(Math.min(0.92, Math.max(0.55, np)).toFixed(2));
+      });
+      setLiveMoisture(prev => {
+        let nm = prev + (Math.floor(Math.random() * 3) - 1); // ±1 point swing
+        return Math.min(85, Math.max(20, nm));
+      });
+    }, 4000);
     return () => clearInterval(interval);
   }, [syncing]);
+
+  const ndviLabel = liveNDVI > 0.75 ? "High Vigor" : liveNDVI > 0.65 ? "Normal Vigor" : "Stress Detected";
+  const ndviColor = liveNDVI > 0.75 ? "text-emerald-400" : liveNDVI > 0.65 ? "text-amber-400" : "text-red-400";
 
   return (
     <motion.div
@@ -75,7 +102,7 @@ export const SatelliteVisionCard = () => {
                 <Satellite className="h-5 w-5 text-[#00C3FF] animate-pulse" />
               </div>
               <p className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#00C3FF]">
-                Establishing Uplink...
+                Processing Weather Bands...
               </p>
             </motion.div>
           ) : (
@@ -94,15 +121,30 @@ export const SatelliteVisionCard = () => {
               </div>
               
               <div className="flex justify-between items-end">
-                <div className="space-y-1">
-                   <div className="flex items-center gap-2 transition-all duration-500">
-                     <div className="h-1 bg-[#00FF9C] rounded-full transition-all duration-500" style={{ width: `${liveNDVI * 40}px` }} />
-                     <span className="text-[8px] font-mono text-gray-400">NDVI: {liveNDVI} ({liveNDVI > 0.7 ? "High Vigor" : "Normal Vigor"})</span>
-                   </div>
-                   <div className="flex items-center gap-2 transition-all duration-500">
-                     <div className="h-1 bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${liveMoisture}px` }} />
-                     <span className="text-[8px] font-mono text-gray-400">Moisture: {liveMoisture}%</span>
-                   </div>
+                <div className="space-y-1.5">
+                  {/* NDVI bar */}
+                  <div className="flex items-center gap-2 transition-all duration-700">
+                    <div
+                      className="h-1 rounded-full transition-all duration-700"
+                      style={{
+                        width: `${liveNDVI * 44}px`,
+                        background: liveNDVI > 0.75 ? "#00FF9C" : liveNDVI > 0.65 ? "#f59e0b" : "#f43f5e"
+                      }}
+                    />
+                    <span className={`text-[8px] font-mono font-bold ${ndviColor}`}>
+                      NDVI: {liveNDVI} ({ndviLabel})
+                    </span>
+                  </div>
+                  {/* Moisture bar */}
+                  <div className="flex items-center gap-2 transition-all duration-700">
+                    <div
+                      className="h-1 bg-[#00C3FF] rounded-full transition-all duration-700"
+                      style={{ width: `${(liveMoisture / 85) * 44}px` }}
+                    />
+                    <span className="text-[8px] font-mono text-gray-400">
+                      Moisture: {liveMoisture}% <span className="text-gray-600">(weather-derived)</span>
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1 text-[8px] uppercase tracking-widest text-gray-500 border border-white/10 rounded px-1.5 py-0.5 bg-black/50">
                   <Cpu className="h-2.5 w-2.5 text-[#00C3FF]" />

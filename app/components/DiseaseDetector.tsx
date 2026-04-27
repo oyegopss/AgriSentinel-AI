@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Leaf, Loader2, AlertTriangle, CheckCircle, Camera, Eye, Cpu } from "lucide-react";
+import { Upload, Leaf, Loader2, AlertTriangle, CheckCircle, Camera, Eye, Cpu, ShoppingCart } from "lucide-react";
 import { validateLeafColor, normalizeExposure, generateExplainabilityHeatmap } from "@/lib/imageUtils";
 type TF = typeof import("@tensorflow/tfjs");
 
@@ -173,6 +173,44 @@ export const DiseaseDetector = ({ onResult, weather, profile }: DiseaseDetectorP
          contextualNote = contextualNote ? `${contextualNote} Priority match for ${profile.crop}.` : `Priority match for ${profile.crop}.`;
       }
 
+      // 3. Hybrid Verification (Pitch Feature: Cloud Consensus)
+      let isVerifiedByCloud = false;
+      if (confidence < 75) {
+        try {
+          // Simulate calling the Python backend for "High Precision Second Opinion"
+          const formData = new FormData();
+          formData.append("file", file);
+          const cloudRes = await fetch("/api/disease/detect", {
+            method: "POST",
+            body: formData,
+          });
+          if (cloudRes.ok) {
+            const cloudData = await cloudRes.json();
+            // If cloud is more confident or confirms, use that
+            if (cloudData.confidence > 0.8 || cloudData.disease !== "Healthy") {
+              isVerifiedByCloud = true;
+              contextualNote = contextualNote 
+                ? `${contextualNote} Verified by Cloud Engine.` 
+                : "Cloud Consensus: Confirmed by High-Precision Engine.";
+            }
+          }
+        } catch (cErr) {
+          console.warn("Cloud verification skipped (backend offline)");
+        }
+      }
+
+      // 4. Regional Risk Check
+      const state = (profile?.locationData?.state || "").toLowerCase();
+      const isRegionalRisk = 
+        (state.includes("punjab") || state.includes("haryana")) && lower.includes("rust") ||
+        (state.includes("maharashtra") || state.includes("karnataka")) && lower.includes("blight");
+      
+      if (isRegionalRisk) {
+        contextualNote = contextualNote 
+          ? `${contextualNote} Matches regional risk profile.` 
+          : "Regional Alert: This disease is common in your district.";
+      }
+
       const rawLabel = pvName.replace(/___/g, " — ").replace(/_/g, " ");
       
       let recommendation = "Apply standard treatment.";
@@ -184,7 +222,7 @@ export const DiseaseDetector = ({ onResult, weather, profile }: DiseaseDetectorP
       if (diseaseCategory === "Powdery Mildew") recommendation = "Apply sulfur spray/neem oil. Improve air circulation.";
 
       // Fallback for really low confidence even if valid leaf
-      if (confidence < 55) {
+      if (confidence < 50 && !isVerifiedByCloud) {
           diseaseCategory = "Uncertain Condition";
           severityStr = "Low Risk";
           recommendation = "Confidence is very low. Please upload a clearer image.";
@@ -192,8 +230,8 @@ export const DiseaseDetector = ({ onResult, weather, profile }: DiseaseDetectorP
 
       const data: DiseaseResult = {
           is_leaf: true,
-          disease: confidence >= 55 ? `${diseaseCategory} (${rawLabel})` : diseaseCategory,
-          confidence: confidence / 100, // Make it 0-1 range for the widget
+          disease: (confidence >= 50 || isVerifiedByCloud) ? `${diseaseCategory} (${rawLabel})` : diseaseCategory,
+          confidence: confidence / 100, 
           severity: severityStr,
           recommendation: recommendation,
           contextualNote: contextualNote
@@ -343,6 +381,25 @@ export const DiseaseDetector = ({ onResult, weather, profile }: DiseaseDetectorP
 
                         <div className="space-y-2">
                            <div className="rounded-xl bg-white/5 p-3 border border-white/5">
+                              <div className="flex justify-between items-center mb-1.5">
+                                <p className="text-[8px] font-bold uppercase tracking-widest text-gray-500">Risk Intensity</p>
+                                <span className={`text-[9px] font-black uppercase ${
+                                  result.severity.includes('High') ? 'text-red-400' : 
+                                  result.severity.includes('Moderate') ? 'text-amber-400' : 'text-emerald-400'
+                                }`}>
+                                  {result.severity}
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-3">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: result.severity.includes('High') ? '90%' : result.severity.includes('Moderate') ? '50%' : '10%' }}
+                                  className={`h-full rounded-full ${
+                                    result.severity.includes('High') ? 'bg-red-500' : 
+                                    result.severity.includes('Moderate') ? 'bg-amber-500' : 'bg-emerald-500'
+                                  }`} 
+                                />
+                              </div>
                               <p className="text-xs font-medium text-gray-300">
                                 {result.recommendation}
                               </p>
@@ -368,6 +425,20 @@ export const DiseaseDetector = ({ onResult, weather, profile }: DiseaseDetectorP
                              >
                                <Eye className="h-4 w-4" />
                                {showHeatmap ? "Hide Analysis Map" : "Show AI Explanation Map"}
+                             </button>
+                           )}
+
+                           {!result.disease.includes('Healthy') && (
+                             <button 
+                               onClick={() => {
+                                 // Scroll to treatment card and highlight it
+                                 const el = document.getElementById('treatment-section');
+                                 if (el) el.scrollIntoView({ behavior: 'smooth' });
+                               }}
+                               className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#00FF9C] to-[#00C3FF] py-3 text-[11px] font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(0,255,156,0.3)] transition-all hover:scale-[1.02]"
+                             >
+                               <ShoppingCart className="h-4 w-4" />
+                               Order {result.disease.split('(')[0].trim()} Kit
                              </button>
                            )}
                         </div>

@@ -74,6 +74,24 @@ export const FarmHistory = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Hardware / IoT Integration Roadmap Notice (For Pitch/Judges) */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mt-6 rounded-2xl border border-[#00C3FF]/20 bg-[#00C3FF]/5 p-5 relative overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-1 h-full bg-[#00C3FF]" />
+        <h4 className="text-sm font-bold text-[#00C3FF] mb-2 flex items-center gap-2">
+          🚀 Future Roadmap: IoT & Hardware Integration
+        </h4>
+        <p className="text-xs text-gray-300 leading-relaxed max-w-3xl">
+          While our core AI (Disease CNN, Weather-based Risk, and Market Intelligence) is fully operational today, our <span className="font-bold text-white">Satellite Vision</span> and <span className="font-bold text-white">Soil Health</span> modules are currently running on simulated baseline data. 
+          <br /><br />
+          In Phase 2, we will integrate with <strong>Sentinel Hub APIs</strong> for real-time multi-spectral NDVI imagery, and connect to physical <strong>IoT Soil Sensors</strong> to feed live N/P/K and moisture data directly into our AI decision engine.
+        </p>
+      </motion.div>
     </div>
   );
 };
